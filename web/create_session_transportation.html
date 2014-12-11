@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Create Game Session DB</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+        <div id="window">
+            <form method="POST" action="UploadGameERF" enctype="multipart/form-data" >
+                <h1>Create game session database!</h1>
+                <br>
+                Which Data Base do you want data from? Insert Table Name:
+                <input type="text" name="table" id="tablename"/>
+                <br>
+                 <br>
+                Which game session is this? Insert game session name:
+                <input type="text" name="game" id="gamename"/>
+                <br>
+                Add + for maximization and - for minimization per criteria
+                <input id="symbols" type="text" name="minmax" value="" size="12" />
+                <br>
+         <!--       Are there any weights you would like to provide? 
+                <input type="checkbox" name="bweights" id="bweights" >
+                <div id="wei" style="display:none;">
+                    <br>Seperate values with commas eg. 54.5,27.2
+                    <br>
+                    <input type="text" name="weights" id="weights" value=""/>
+                    <br>
+                </div>
+                <br>
+         -->
+                <input  type="submit" value="Create" name="uploadgame" id="uploadgame" />
+                </br>
+
+            </form>
+        </div>
+      <!--   <script src ="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+       <script>
+            $(document).ready(function () {
+                $('#bweights').click(function () {
+                    $("#wei").toggle(this.checked);
+                });
+
+            })
+        </script>
+      -->
+    </body>
+</html>

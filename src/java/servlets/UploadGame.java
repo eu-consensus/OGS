@@ -133,38 +133,6 @@ public class UploadGame extends HttpServlet {
 
     }
 
-    private static List<policy> createdata(InputStream is, int number, int number2) throws IOException {
-
-        List<policy> mypolicy = new ArrayList<>();
-        char[] buf = new char[2048];
-        String line = "";
-        String splitBy = ",";
-
-        BufferedReader r = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-        while ((line = r.readLine()) != null) {
-            //minimization (-) maximization(+)
-            String[] policy = line.split(splitBy);
-            policy newpol = new policy(number, number2);
-            int u = 0;
-            double[] data = new double[number];
-            for (int i = 0; i < policy.length; i++) {
-                //if a policy name is provided then add it else create a Unique id
-                if (i == 0) {
-                    newpol.setPolicyName(policy[0]);
-                    continue;
-                }
-
-                data[u] = Double.parseDouble(policy[i]);
-                u++;
-            }
-            newpol.setObjectives(data);
-            newpol.setDistance();
-            newpol.setOrder(number);
-            mypolicy.add(newpol);
-        }
-        return mypolicy;
-    }
-
     private static List<policy> setScore(List<policy> mypol) {
         Collections.sort(mypol, new polComparatorRDD());//sorted by rank-domination count-domination by category
 
