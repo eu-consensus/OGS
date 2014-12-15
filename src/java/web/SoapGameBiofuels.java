@@ -188,10 +188,10 @@ public class SoapGameBiofuels {
             for (Join_keep temp : mylist) {
                 total += temp.getChosen();
             }
-            HashMap<String, HashMap<String,  Double>> preferenceOrder = new HashMap<>();
+            HashMap<String, HashMap<String, Double>> preferenceOrder = new HashMap<>();
 //            create hash map for each priority
             for (int i = 0; i < allobj; i++) {
-                preferenceOrder.put("objective" + Integer.toString(i), new HashMap<String,  Double>());
+                preferenceOrder.put("objective" + Integer.toString(i), new HashMap<String, Double>());
             }
             //put values in tables
             for (Join_keep temp : mylist) {
@@ -201,98 +201,122 @@ public class SoapGameBiofuels {
                     if (preferenceOrder.get("objective" + Integer.toString(i)).containsKey(chr[i] + "")) {
                         preferenceOrder.get("objective" + Integer.toString(i)).put(chr[i] + "", preferenceOrder.get("prior" + Integer.toString(i)).get(chr[i] + "") + temp.getChosen());
                     } else {
-                        preferenceOrder.get("objective" + Integer.toString(i)).put(chr[i] + "", (double)temp.getChosen());
+                        preferenceOrder.get("objective" + Integer.toString(i)).put(chr[i] + "", (double) temp.getChosen());
                     }
                 }
             }
 //            make percentages
             for (int i = 0; i < allobj; i++) {
-               
+
                 for (Map.Entry<String, Double> entry : preferenceOrder.get("objective" + Integer.toString(i)).entrySet()) {
-                   entry.setValue(entry.getValue()/total);
-                }     
+                    entry.setValue(entry.getValue() / total);
+                }
             }
 
             stmtj.close();
             stmt.close();
             conn.close();
-            
+
         } catch (SQLException ex) {
             Logger.getLogger(SoapGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    @WebMethod(operationName = "increaseChosen")
-    public void increaseChosen(@WebParam(name = "tablename1") String table_name1,@WebParam(name="id")int id) {
-         Connection conn = dbUtils.getConnection();
-        String query1 = "SELECT * FROM " + table_name1+ "WHERE ID=?";
 
-             try {
-            PreparedStatement stmt = conn.prepareStatement(query1);
-             stmt.setInt(1,id);
+    @WebMethod(operationName = "increaseChosen")
+    public void increaseChosen(@WebParam(name = "tablename1") String table_name1, @WebParam(name = "id") int id) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+        System.out.print(query1);
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt.setInt(1, id);
+
             ResultSet res = stmt.executeQuery();
-            Integer chosen = res.getInt(8);
-            chosen++;
-            res.updateInt(8, chosen);
-           em.merge(res);
-          } catch (Exception exception) {
-            String foo = "asdf";
+            if (res.next()) {
+                System.out.print(res.getInt(8));
+                Integer chosen = res.getInt(8);
+                chosen++;
+                res.updateInt(8, chosen);
+                res.updateRow();
+            }
+        } catch (Exception exception) {
+            System.out.printf(exception.getMessage());
         }
     }
 
     @WebMethod(operationName = "increaseLiked")
-    public void increaseLiked(@WebParam(name = "tablename1") String table_name1,@WebParam(name="id")int id) {
-       
+    public void increaseLiked(@WebParam(name = "tablename1") String table_name1, @WebParam(name = "id") int id) {
+
         Connection conn = dbUtils.getConnection();
-        String query1 = "SELECT * FROM " + table_name1+ "WHERE ID=?";        
-try {
-            PreparedStatement stmt = conn.prepareStatement(query1);
-            stmt.setInt(1,id);
-            ResultSet res = stmt.executeQuery();            
-            Integer liked = res.getInt(9);
-            liked++;
-            res.updateInt(9,liked);
-            em.merge(res);
-          } catch (Exception exception) {
+        String query1 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt.setInt(1, id);
+
+            ResultSet res = stmt.executeQuery();
+            if (res.next()) {
+                System.out.print(res.getInt(9));
+                Integer chosen = res.getInt(9);
+                chosen++;
+                res.updateInt(9, chosen);
+                res.updateRow();
+            }
+        } catch (Exception exception) {
         }
     }
 
     @WebMethod(operationName = "decreaseChosen")
-     public void decreaseChosen(@WebParam(name = "tablename1") String table_name1,@WebParam(name="id")int id) {
-         Connection conn = dbUtils.getConnection();
-        String query1 = "SELECT * FROM " + table_name1+ "WHERE ID=?";
+    public void decreaseChosen(@WebParam(name = "tablename1") String table_name1, @WebParam(name = "id") int id) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
 
-             try {
-            PreparedStatement stmt = conn.prepareStatement(query1);
-             stmt.setInt(1,id);
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt.setInt(1, id);
+
             ResultSet res = stmt.executeQuery();
-            Integer chosen = res.getInt(8);
-            chosen--;
-            res.updateInt(8, chosen);
-            em.merge(res);
-          } catch (Exception exception) {
-            String foo = "asdf";
+            if (res.next()) {
+                System.out.print(res.getInt(8));
+                Integer chosen = res.getInt(8);
+                chosen--;
+                res.updateInt(8, chosen);
+                res.updateRow();
+            }
+        } catch (Exception exception) {
         }
     }
 
     @WebMethod(operationName = "decreaseLiked")
-   public void decreaseLiked(@WebParam(name = "tablename1") String table_name1,@WebParam(name="id")int id) {
-       
+    public void decreaseLiked(@WebParam(name = "tablename1") String table_name1, @WebParam(name = "id") int id) {
+
         Connection conn = dbUtils.getConnection();
-        String query1 = "SELECT * FROM " + table_name1+ "WHERE ID=?";        
-try {
-            PreparedStatement stmt = conn.prepareStatement(query1);
-            stmt.setInt(1,id);
-            ResultSet res = stmt.executeQuery();            
-            Integer liked = res.getInt(9);
-            liked++;
-            res.updateInt(9,liked);
-            em.merge(res);
-          } catch (Exception exception) {
+        String query1 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt.setInt(1, id);
+
+            ResultSet res = stmt.executeQuery();
+            if (res.next()) {
+                System.out.print(res.getInt(9));
+                Integer chosen = res.getInt(9);
+                chosen--;
+                res.updateInt(9, chosen);
+                res.updateRow();
+            }
+        } catch (Exception exception) {
         }
     }
-    
+//   Preference by priority
+//    for (int i = 0; i < allobj; i++) {
+//                int top = 0;
+//                String objmap = "";
+//                for (Map.Entry<String, Integer> entry : preferenceOrder.get("objective" + Integer.toString(i)).entrySet()) {
+//                    if (top < entry.getValue()) {
+//                        top = entry.getValue();
+//                        objmap = entry.getKey();
+//                    }
+//                }
+//                preferenceOrder.get("objective" + Integer.toString(i)).put(objmap, top/total);
+//            }
 
 }
-
-      
