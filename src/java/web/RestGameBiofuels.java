@@ -126,4 +126,5 @@ public class RestGameBiofuels {
         ResponseBuilder builder = Response.ok(result.toString());
         return builder.build();
     }
+    
 }

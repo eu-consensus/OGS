@@ -168,17 +168,21 @@ public class policy {
         return order;
     }
 
-    public void setOrder(int objectives_number) {
+    public void setOrder(int objectives_number,double[] optimalValue,double[] worseValue) {
         //in order to create the right order we need to substract from the total number of objectives
-        int[] thisorder = new int[objectives.length];
+        int[] thisorder = new int[objectives_number];
         double[] sorted = objectives.clone();
-        Arrays.sort(sorted);
+        for(int i=0;i<objectives_number;i++){
+            sorted[i]=Math.abs(sorted[i]-worseValue[i])/Math.abs(optimalValue[i]-worseValue[i]);
+        }
+         double[] sorted2 = sorted.clone();
+        Arrays.sort(sorted2);
         String myorder = "";
         //TODO fix O() add equals in same order value
-        for (int j = 0; j < objectives.length; j++) {
-            for (int i = 0; i < objectives.length; i++) {
+        for (int j = 0; j < objectives_number; j++) {
+            for (int i = 0; i < objectives_number; i++) {
 
-                if (objectives[j] == sorted[i]) {
+                if (sorted2[j] == sorted[i]) {
                     thisorder[j] = objectives_number - i;
                 }
             }

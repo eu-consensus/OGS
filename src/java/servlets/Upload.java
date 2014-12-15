@@ -57,6 +57,7 @@ public class Upload extends HttpServlet {
         String addobjp = "";
         String addobjn = "";
         String stpar = "";
+
         try {
 
             //   FileInputStream file = new FileInputStream(new File("C:/Users/anu/Desktop/ERF-IIASA/TEST1.xlsx"));
@@ -242,51 +243,5 @@ public class Upload extends HttpServlet {
             }
         }
         return names;
-    }
-
-    private static List<policy> createdata(InputStream is, int number, int number2) throws IOException {
-
-        List<policy> mypolicy = new ArrayList<>();
-        char[] buf = new char[2048];
-        String line = "";
-        String splitBy = ",";
-
-        BufferedReader r = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-        while ((line = r.readLine()) != null) {
-            //minimization (-) maximization(+)
-            String[] policy = line.split(splitBy);
-            policy newpol = new policy(number, number2);
-            int u = 0;
-            double[] data = new double[number];
-            for (int i = 0; i < policy.length; i++) {
-                //if a policy name is provided then add it else create a Unique id
-                if (i == 0) {
-                    newpol.setPolicyName(policy[0]);
-                    continue;
-                }
-
-                data[u] = Double.parseDouble(policy[i]);
-                u++;
-            }
-            newpol.setObjectives(data);
-            newpol.setDistance();
-            newpol.setOrder(number);
-            mypolicy.add(newpol);
-        }
-        return mypolicy;
-    }
-
-    private static String readString(InputStream is) throws IOException {
-        char[] buf = new char[2048];
-        Reader r = new InputStreamReader(is, "UTF-8");
-        StringBuilder s = new StringBuilder();
-        while (true) {
-            int n = r.read(buf);
-            if (n < 0) {
-                break;
-            }
-            s.append(buf, 0, n);
-        }
-        return s.toString();
     }
 }

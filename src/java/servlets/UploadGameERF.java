@@ -41,7 +41,7 @@ public class UploadGameERF extends HttpServlet {
         String gamename = request.getParameter("game");
         boolean[] myminmax = methods.minmax(minmax);
         String name = tablename + "_" + gamename;
-
+double[] optimalValues,worseValues;
 //TODO CHECK FUNCTION REMOVE REGEX 
         String sql = "CREATE TABLE IF NOT EXISTS " + name
                 + "(ID INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, "
@@ -74,23 +74,54 @@ public class UploadGameERF extends HttpServlet {
                     param++;
                 }
             }
-            int allobj = columnsNumber - param - 1;
+             int allobj = columnsNumber - param - 1;
+            optimalValues = new double[allobj];
+            worseValues = new double[allobj];
+            if (res.next()) {
+                for (int i = 0; i < allobj; i++) {
+                    optimalValues[i] = res.getDouble(param + 2 + i);
+                    worseValues[i] = res.getDouble(param + 2 + i);
+                }
+            }
             int beforeobj = param + 2;
+            double[] obj_valuestest = new double[allobj];
+           
             while (res.next()) {
-                policy pol = new policy(allobj, 0);
-                pol.setID(res.getInt(1));
-                pol.setPolicyName(res.getString(2));
-                double[] obj_values = new double[allobj];
-
                 for (int i = 0; i < allobj; i++) {
 
-                    obj_values[i] = res.getDouble(beforeobj + i);
+                    obj_valuestest[i] = res.getDouble(beforeobj + i);
+                    if (myminmax[i]) {
+                        if (optimalValues[i] < obj_valuestest[i]) {
+                            optimalValues[i] = obj_valuestest[i];
+                        }
+                        if (worseValues[i] > obj_valuestest[i]) {
+                            worseValues[i] = obj_valuestest[i];
+                        }
+                    } else {
+                        if (optimalValues[i] > obj_valuestest[i]) {
+                            optimalValues[i] = obj_valuestest[i];
+                        }
+                         if (worseValues[i] < obj_valuestest[i]) {
+                            worseValues[i] = obj_valuestest[i];
+                        }
+                    }
                 }
-                pol.setObjectives(obj_values);
-                pol.setDistance();
-                pol.setOrder(allobj);
-                mypol.add(pol);
             }
+             res.first();
+                while (res.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(res.getInt(1));
+                    pol.setPolicyName(res.getString(2));
+                    double[] obj_values = new double[allobj];
+
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = res.getDouble(beforeobj + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pol.setDistance();
+                    pol.setOrder(allobj, optimalValues,worseValues);
+                    mypol.add(pol);
+                }
             int pwi = 0;
 
 //TODO ADD ALL IN pol so i can do math
