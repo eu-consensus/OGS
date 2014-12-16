@@ -226,7 +226,102 @@ public class methods {
         }
         return minmax;
     }
+    
+    //find ranges and their % of appearance 
+       public static double[] find_space(List<maj> test, int total) {
 
+        double[] space = new double[3];
+        for (int u = 0; u < space.length; u++) {
+            space[u] = 0.0;
+        }
+
+        int k = (int) Math.round(test.size() * 0.2);
+        if (k < 1) {
+            k = 1;
+        }
+        double threshold = 30;//the threshold we use to verify preference
+
+        for (int w = 0; w < test.size(); w++) {
+            int temp_amount = 0;
+            for (int i = 0; i < k; i++) {
+
+                if (w + i < test.size()) {//make certain we dont get out of bounds 
+                    if (test.get(w).getCount() == 0) {//if the previous value is chosen 0 times then we better start from the next one in creating the spaces in order not to create a space with 100-0-0-0-50
+                        break;
+                    }
+                    temp_amount += test.get(w + i).getCount();
+                    if (Double.compare((double) temp_amount * 100 / total, threshold) > 0) {
+
+                        if (space[2] < temp_amount * 100 / total) {
+                            space[2] = temp_amount * 100 / total;
+                            space[0] = test.get(w).getValue(); //start value 
+                            space[1] = test.get(w + i).getValue(); // end value if no one else added then i=0 and it gives the start value
+                        }
+                    }
+                }
+            }
+            temp_amount = 0;
+        }
+        return space;
+    }
+public static List<maj> merge(List<maj> majList) {
+        List<maj> merged = new ArrayList<maj>();
+        Hashtable<Double, Integer> hashList = new Hashtable<Double, Integer>();
+        for (maj temp : majList) {
+            if (hashList.containsKey(temp.getValue())) {
+                hashList.put(temp.getValue(), hashList.get(temp.getValue()) + temp.getCount());
+            } else {
+                hashList.put(temp.getValue(), temp.getCount());
+            }
+        }
+        Enumeration<Double> e = hashList.keys();
+        while (e.hasMoreElements()) {
+            Double key = e.nextElement();
+            maj temp1 = new maj();
+            temp1.setValue(key);
+            temp1.setCount(hashList.get(key));
+            merged.add(temp1);
+        }
+
+        return merged;
+    }
+
+    public static orderel mergeor(List<orderel> orderList) {
+        orderel merged = new orderel();
+        Hashtable<String, Integer> hashList = new Hashtable<>();
+
+        for (orderel temp : orderList) {
+            if (hashList.containsKey(temp.getValue())) {
+                hashList.put(temp.getValue(), hashList.get(temp.getValue()) + temp.getCount());
+            } else {
+                hashList.put(temp.getValue(), temp.getCount());
+            }
+        }
+        Enumeration<String> e = hashList.keys();
+        orderel temp1 = new orderel();
+        while (e.hasMoreElements()) {
+            String key = e.nextElement();
+            int count = 0;
+            if (count < hashList.get(key)) {
+                temp1.setValue(key);
+                temp1.setCount(hashList.get(key));
+                count = hashList.get(key);
+            }
+        }
+        return temp1;
+    }
+    
+    //an oi times einai sunexeis tupou 0.1-0.2-0.3 ktl tote to diastima tha antistoixei sto 20% tou diastimatos 
+    //an den einai tote to diastima tha antistoixei sto 20% twn sinolikwn timwn pou emfanizontai :)
+    public static class MajComparator implements Comparator<maj> {
+
+        @Override
+        public int compare(maj p1, maj p2) {
+            return Double.compare(p1.getValue(), p2.getValue());
+        }
+    }
+
+ 
 //Finding pareto frontiers provided the minimization or maximization criteria of each objective O(n^2)
     public static List<policy> paretoM(List<policy> theList, boolean[] minmax) {
 
