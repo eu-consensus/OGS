@@ -7,8 +7,13 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Stateless;
@@ -22,7 +27,12 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import methods.Join_keep;
 import methods.dbUtils;
+import methods.maj;
+import methods.methods;
+import static methods.methods.find_space;
+import static methods.methods.merge;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -122,6 +132,302 @@ public class RestGameTransportation {
             e.printStackTrace();
         } catch (SQLException ex) {
             Logger.getLogger(RestBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/PreferencebyObjective/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+
+    public Response PreferencebyObjective(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            int allobj = columnsNumber - param - 1;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(param + 2 + i);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "" + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + ", ";
+            }
+            //i want to have doubles for objective values + the order + how many times each one was selected
+            String select = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
+            String joinQuery = "SELECT " + select
+                    + " FROM " + table_name2
+                    + " LEFT JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
+                    + " ORDER BY " + table_name2 + ".ID";
+            PreparedStatement stmtj = conn.prepareStatement(joinQuery);
+            ResultSet resj = stmtj.executeQuery();
+            List<Join_keep> mylist = new ArrayList<Join_keep>();
+            while (resj.next()) {
+                Join_keep mykeep = new Join_keep(allobj);
+                mykeep.setPolicy(resj.getString("policy"));
+                double[] data = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+                    data[i] = resj.getDouble(objn[i]);
+                }
+                mykeep.setData(data);
+                mykeep.setChosen(resj.getInt("chosen"));
+                mykeep.setMyorder(resj.getString("myorder"));
+                mylist.add(mykeep);
+            }
+            int total = 0;
+            for (Join_keep temp : mylist) {
+                total += temp.getChosen();
+            }
+            HashMap<String, HashMap<String, Double>> preferenceOrder = new HashMap<>();
+//            create hash map for each priority
+            for (int i = 0; i < allobj; i++) {
+                preferenceOrder.put("objective" + Integer.toString(i), new HashMap<String, Double>());
+            }
+            //put values in tables
+            for (Join_keep temp : mylist) {
+
+                char[] chr = temp.getMyorder().toCharArray();
+                for (int i = 0; i < chr.length; i++) {
+                    if (preferenceOrder.get("objective" + Integer.toString(i)).containsKey(chr[i] + "")) {
+                        preferenceOrder.get("objective" + Integer.toString(i)).put(chr[i] + "", preferenceOrder.get("objective" + Integer.toString(i)).get(chr[i] + "") + temp.getChosen());
+                    } else {
+                        preferenceOrder.get("objective" + Integer.toString(i)).put(chr[i] + "", (double) temp.getChosen());
+                    }
+                }
+            }
+//            make percentages
+            for (int i = 0; i < allobj; i++) {
+                for (Map.Entry<String, Double> entry : preferenceOrder.get("objective" + Integer.toString(i)).entrySet()) {
+                    entry.setValue(entry.getValue() / total);
+                }
+            }
+//System.out.print(preferenceOrder.get("objective" +Integer.toString(objective_number)).toString());
+//                result.put("objective" +Integer.toString(objective_number), preferenceOrder.get("objective" +Integer.toString(objective_number)).toString());
+            for (int i = 0; i < allobj; i++) {
+                JSONObject myjson = new JSONObject();
+                for (Map.Entry<String, Double> entry : preferenceOrder.get("objective" + Integer.toString(i)).entrySet()) {
+                    myjson.put(entry.getKey(), entry.getValue());
+                }
+                result.put(objn[i], myjson);
+            }
+            stmtj.close();
+            stmt.close();
+            conn.close();
+
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/PreferencebyPriority/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+
+    public Response PreferencebyPriority(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            int allobj = columnsNumber - param - 1;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(param + 2 + i);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "" + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + ", ";
+            }
+            //i want to have doubles for objective values + the order + how many times each one was selected
+            String select = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
+            String joinQuery = "SELECT " + select
+                    + " FROM " + table_name2
+                    + " LEFT JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
+                    + " ORDER BY " + table_name2 + ".ID";
+            PreparedStatement stmtj = conn.prepareStatement(joinQuery);
+            ResultSet resj = stmtj.executeQuery();
+            List<Join_keep> mylist = new ArrayList<Join_keep>();
+            while (resj.next()) {
+                Join_keep mykeep = new Join_keep(allobj);
+                mykeep.setPolicy(resj.getString("policy"));
+                double[] data = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+                    data[i] = resj.getDouble(objn[i]);
+                }
+                mykeep.setData(data);
+                mykeep.setChosen(resj.getInt("chosen"));
+                mykeep.setMyorder(resj.getString("myorder"));
+                mylist.add(mykeep);
+            }
+            int total = 0;
+            for (Join_keep temp : mylist) {
+                total += temp.getChosen();
+            }
+            HashMap<String, HashMap<String, Double>> preferenceOrder = new HashMap<>();
+//            create hash map for each priority
+            for (int i = 0; i < allobj; i++) {
+                preferenceOrder.put("priority" + Integer.toString(i + 1), new HashMap<String, Double>());
+            }
+            //put values in tables
+            for (Join_keep temp : mylist) {
+
+                char[] chr = temp.getMyorder().toCharArray();
+                for (int i = 0; i < chr.length; i++) {
+                    if (preferenceOrder.get("priority" + chr[i]).containsKey(objn[i])) {
+                        preferenceOrder.get("priority" + chr[i]).put(objn[i], preferenceOrder.get("priority" + chr[i]).get(objn[i]) + temp.getChosen());
+                    } else {
+                        preferenceOrder.get("priority" + chr[i]).put(objn[i], (double) temp.getChosen());
+                    }
+                }
+            }
+//            make percentages
+            for (int i = 0; i < allobj; i++) {
+                for (Map.Entry<String, Double> entry : preferenceOrder.get("priority" + Integer.toString(i + 1)).entrySet()) {
+                    entry.setValue(entry.getValue() / total);
+                }
+            }
+//System.out.print(preferenceOrder.get("objective" +Integer.toString(objective_number)).toString());
+//                result.put("objective" +Integer.toString(objective_number), preferenceOrder.get("objective" +Integer.toString(objective_number)).toString());
+            for (int i = 0; i < allobj; i++) {
+                JSONObject myjson = new JSONObject();
+                for (Map.Entry<String, Double> entry : preferenceOrder.get("priority" + Integer.toString(i + 1)).entrySet()) {
+                    myjson.put(entry.getKey(), entry.getValue());
+                }
+                result.put("priority" + Integer.toString(i + 1), myjson);
+            }
+            stmtj.close();
+            stmt.close();
+            conn.close();
+
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/PreferencebyRange/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response PreferencebyRange(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            int allobj = columnsNumber - param - 1;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(param + 2 + i);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "" + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + ", ";
+            }
+            //i want to have doubles for objective values + the order + how many times each one was selected
+            String select = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
+            String joinQuery = "SELECT " + select
+                    + " FROM " + table_name2
+                    + " LEFT JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
+                    + " ORDER BY " + table_name2 + ".ID";
+            PreparedStatement stmtj = conn.prepareStatement(joinQuery);
+            ResultSet resj = stmtj.executeQuery();
+            List<Join_keep> mylist = new ArrayList<Join_keep>();
+            while (resj.next()) {
+                Join_keep mykeep = new Join_keep(allobj);
+                mykeep.setPolicy(resj.getString("policy"));
+                double[] data = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+                    data[i] = resj.getDouble(objn[i]);
+                }
+                mykeep.setData(data);
+                mykeep.setChosen(resj.getInt("chosen"));
+                mykeep.setMyorder(resj.getString("myorder"));
+                mylist.add(mykeep);
+            }
+            int total = 0;
+            for (Join_keep temp : mylist) {
+                total += temp.getChosen();
+            }
+            HashMap<String, List<maj>> preferenceOrder = new HashMap<>();
+//            create hash map for each priority
+            for (int i = 0; i < allobj; i++) {
+                preferenceOrder.put(objn[i], new ArrayList<>());
+            }
+            //put values in tables
+            for (Join_keep temp : mylist) {
+
+                double[] dt = temp.getData();
+                for (int i = 0; i < dt.length; i++) {
+                    maj tmaj = new maj();
+                    tmaj.setValue(dt[i]);
+                    tmaj.setCount(temp.getChosen());
+                    preferenceOrder.get(objn[i]).add(tmaj);
+                }
+            }
+
+            for (Map.Entry<String, List<maj>> entry : preferenceOrder.entrySet()) {
+                JSONObject tjson = new JSONObject();
+                List<maj> temp2 = entry.getValue();
+                temp2 = merge(temp2);
+                Collections.sort(temp2, new methods.MajComparator());
+                double[] spaces = new double[3];
+                spaces = find_space(temp2, total);
+                tjson.put("begin", spaces[0]);
+                tjson.put("end", spaces[1]);
+                tjson.put("percentage", spaces[2]);
+                result.put(entry.getKey(), tjson);
+            }
+
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
         }
         ResponseBuilder builder = Response.ok(result.toString());
         return builder.build();

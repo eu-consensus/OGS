@@ -48,11 +48,10 @@ public class UploadT extends HttpServlet {
         InputStream filecontent = filePart.getInputStream();
 
         Integer count_of_names = Integer.parseInt(request.getParameter("countofnames"));
-        String table_name = request.getParameter("dbname");
+        String tablename = request.getParameter("dbname");
 //        boolean[] myminmax = methods.minmax(minmax);
         int ur = 0;
         int objectivecount = 0;
-        String tablename = "";
 
         List<Double> table2 = new ArrayList<>();
         List<String> pol_names = new ArrayList<>();
@@ -64,7 +63,7 @@ public class UploadT extends HttpServlet {
         String stpar = "";
         String[] criteria_names = new String[count_of_names];
         String line = "";
-        String splitBy = ",";
+        String splitBy = ";";
         try {
             BufferedReader r = new BufferedReader(new InputStreamReader(filecontent, "UTF-8"));
             while ((line = r.readLine()) != null) {
@@ -74,20 +73,33 @@ public class UploadT extends HttpServlet {
                 if (ur == 0) {
                     for (int i = 0; i < policy.length; i++) {
                         if (i < count_of_names) {
-                            criteria_names[i] = policy[i];
+                            String wget = policy[i].replaceAll(" ", "");
+                            wget = wget.replaceAll("%", "");
+                            wget = wget.replaceAll("-", "");
+                            wget = wget.replaceAll("[(]", "_");
+                            wget = wget.replaceAll("[)]", "_");
+                            criteria_names[i] = wget;
                         } else {
-                            pol_names.add(policy[i]);
+                            String wget = policy[i].replaceAll(" ", "");
+                            wget = wget.replaceAll("%", "");
+                            wget = wget.replaceAll("-", "");
+                            wget = wget.replaceAll("[(]", "_");
+                            wget = wget.replaceAll("[)]", "_");
+                            pol_names.add(wget);
                         }
                     }
                 } else {
                     for (int i = 0; i < policy.length; i++) {
                         if (i < count_of_names) {
-                            criteria_of_output[i] = policy[i];
+                            String wget = policy[i].replaceAll(" ", "");
+                            wget = wget.replaceAll("%", "");
+                            wget = wget.replaceAll("-", "");
+                            criteria_of_output[i] = wget;
                         } else {
-                            table2.add(Double.parseDouble(policy[i]));
+                            table2.add(Double.parseDouble(policy[i].replace(',', '.')));
                         }
                     }
-                    objectivecount = policy.length - count_of_names - 1;
+                    objectivecount = policy.length - count_of_names;
                     int uobj = 0;
                     double[] objValues = new double[objectivecount];
                     for (double tab : table2) {
@@ -194,7 +206,6 @@ public class UploadT extends HttpServlet {
         return qm;
     }
 
-   
     private static String readString(InputStream is) throws IOException {
         char[] buf = new char[2048];
         Reader r = new InputStreamReader(is, "UTF-8");

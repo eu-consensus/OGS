@@ -3,12 +3,8 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/servlets/Upload.java</file>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/methods/methods.java</file>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/methods/policy.java</file>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/web/index.html</file>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/servlets/UploadT.java</file>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/servlets/UploadERF.java</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/web/RestGameBiofuels.java</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensus/src/java/web/SoapGameBiofuels.java</file>
         </group>
     </open-files>
 </project-private>
