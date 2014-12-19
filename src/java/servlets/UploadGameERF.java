@@ -164,7 +164,7 @@ double[] optimalValues,worseValues;
 
     }
 
-    private static List<policy> setScore(List<policy> mypol) {
+      private static List<policy> setScore(List<policy> mypol) {
         Collections.sort(mypol, new polComparatorRDD());//sorted by rank-domination count-domination by category
 
         double amount = mypol.size() * 0.5; //assign points to 60% of solutions
@@ -175,31 +175,34 @@ double[] optimalValues,worseValues;
         int last_dom = 0;
         int last_score = 0;
         int prev_dom_by = 0;
+        int b=500;
         for (policy pol : mypol) {
-           
-                if (pol.getRank() == 1 && pol.getDominated() == 0 && pol.getDominatedbycategory() == 0) {
-                    pol.setScore(top_score);
-                    last_score = top_score;
-                }
-
-                if (pol.getDominated() > last_dom) {
-                    last_dom = pol.getDominated();
-                    last_score -= step * 5;
-                    rank = pol.getRank();
-                }
-                if (pol.getRank() > rank) {
-                    rank = pol.getRank();
-                    last_score -= step * 3;
-                }
-                if (pol.getDominatedbycategory() > prev_dom_by) {
-                    last_score -= 2;
-                }
-                prev_dom_by = pol.getDominatedbycategory();
-
-                 if (last_score < 0) {
-                pol.setScore(0);
-            } else {pol.setScore(last_score);
+            if (pol.getRank() == 1 && pol.getDominated() == 0 && pol.getDominatedbycategory() == 0) {
+                pol.setScore(top_score);
+                last_score = top_score;
             }
+
+            if (pol.getDominated() > last_dom) {
+                last_dom = pol.getDominated();
+                last_score -= step * 60;
+                rank = pol.getRank();
+            }
+            if (pol.getRank() > rank) {
+                rank = pol.getRank();
+                last_score -= step * 40;
+            }
+            if (pol.getDominatedbycategory() > prev_dom_by) {
+                last_score -= 20;
+            }
+             pol.setScore(last_score);
+            prev_dom_by = pol.getDominatedbycategory();
+        }
+        
+            int bottom=Math.abs(top_score-last_score);
+            int top=0;
+        for (policy pol : mypol) {
+            top=Math.abs(pol.getScore()-last_score)*b;
+            pol.setScore(top/bottom);
         }
         return mypol;
     }

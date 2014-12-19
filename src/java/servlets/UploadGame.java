@@ -37,7 +37,7 @@ public class UploadGame extends HttpServlet {
         String gamename = request.getParameter("game");
         boolean[] myminmax = methods.minmax(minmax);
         String name = tablename + "_" + gamename;
-        double[] optimalValues,worseValues;
+        double[] optimalValues, worseValues;
 //TODO CHECK FUNCTION REMOVE REGEX from table name -game name (form correct name for sql implementation!)
         String sql = "CREATE TABLE IF NOT EXISTS " + name
                 + "(ID INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, "
@@ -79,8 +79,7 @@ public class UploadGame extends HttpServlet {
                 }
             }
             int beforeobj = param + 2;
-           
-           
+
             while (res.next()) {
                 double[] obj_valuestest = new double[allobj];
                 for (int i = 0; i < allobj; i++) {
@@ -97,71 +96,68 @@ public class UploadGame extends HttpServlet {
                         if (optimalValues[i] > obj_valuestest[i]) {
                             optimalValues[i] = obj_valuestest[i];
                         }
-                         if (worseValues[i] < obj_valuestest[i]) {
+                        if (worseValues[i] < obj_valuestest[i]) {
                             worseValues[i] = obj_valuestest[i];
                         }
                     }
                 }
             }
-             //res.first();
-             res.beforeFirst();
-                while (res.next()) {
-                    policy pol = new policy(allobj, 0);
-                    pol.setID(res.getInt(1));
-                    pol.setPolicyName(res.getString(2));
-                    double[] obj_values = new double[allobj];
+            //res.first();
+            res.beforeFirst();
+            while (res.next()) {
+                policy pol = new policy(allobj, 0);
+                pol.setID(res.getInt(1));
+                pol.setPolicyName(res.getString(2));
+                double[] obj_values = new double[allobj];
 
-                    for (int i = 0; i < allobj; i++) {
-                        obj_values[i] = res.getDouble(beforeobj + i);
-                    }
-                    pol.setObjectives(obj_values);
-                    pol.setDistance();
-                    pol.setOrder(allobj, optimalValues,worseValues);
-                    mypol.add(pol);
+                for (int i = 0; i < allobj; i++) {
+                    obj_values[i] = res.getDouble(beforeobj + i);
                 }
-               
+                pol.setObjectives(obj_values);
+                pol.setDistance();
+                pol.setOrder(allobj, optimalValues, worseValues);
+                mypol.add(pol);
+            }
 
 //TODO ADD ALL IN pol so i can do math
-                Collections.sort(mypol, new polComparator());
-                List<policy> mypol1 = methods.paretoM(mypol, myminmax);
-                List<policy> mypol2 = methods.dominationBYcategory(mypol1, myminmax);
-                Collections.sort(mypol2, new polComparator2());
-                List<policy> mypol3 = methods.nsga2FH(mypol2, myminmax);
-                List<policy> mypol4 = setScore(mypol3);
+            Collections.sort(mypol, new polComparator());
+            List<policy> mypol1 = methods.paretoM(mypol, myminmax);
+            List<policy> mypol2 = methods.dominationBYcategory(mypol1, myminmax);
+            Collections.sort(mypol2, new polComparator2());
+            List<policy> mypol3 = methods.nsga2FH(mypol2, myminmax);
+            List<policy> mypol4 = setScore(mypol3);
 
-                String mquery = "INSERT INTO " + name + " (ID,P_ID,distance,dominatedbycategory,dominatedbypool,rank,myorder,chosen,liked,objscore,prefscore) " + "VALUES(?,?,?,?,?,?,?,?,?,?,?)";
-                PreparedStatement mstmt = conn.prepareStatement(mquery);
-                int pwi = 1;
-                //   System.out.print(mquery);
-                for (policy pol : mypol4) {
-                    mstmt.setInt(1, pwi);
-                    mstmt.setInt(2, pol.getID());
-                    mstmt.setDouble(3, pol.getDistance());
-                    mstmt.setInt(4, pol.getDominatedbycategory());
-                    mstmt.setInt(5, pol.getDominated());
-                    mstmt.setInt(6, pol.getRank());
-                    mstmt.setString(7, pol.getOrder());
-                    mstmt.setInt(8, 0);
-                    mstmt.setInt(9, 0);
-                    mstmt.setInt(10, pol.getScore());
-                    mstmt.setInt(11, 0);
-                    mstmt.executeUpdate();
-                    pwi++;
-                }
+            String mquery = "INSERT INTO " + name + " (ID,P_ID,distance,dominatedbycategory,dominatedbypool,rank,myorder,chosen,liked,objscore,prefscore) " + "VALUES(?,?,?,?,?,?,?,?,?,?,?)";
+            PreparedStatement mstmt = conn.prepareStatement(mquery);
+            int pwi = 1;
+            //   System.out.print(mquery);
+            for (policy pol : mypol4) {
+                mstmt.setInt(1, pwi);
+                mstmt.setInt(2, pol.getID());
+                mstmt.setDouble(3, pol.getDistance());
+                mstmt.setInt(4, pol.getDominatedbycategory());
+                mstmt.setInt(5, pol.getDominated());
+                mstmt.setInt(6, pol.getRank());
+                mstmt.setString(7, pol.getOrder());
+                mstmt.setInt(8, 0);
+                mstmt.setInt(9, 0);
+                mstmt.setInt(10, pol.getScore());
+                mstmt.setInt(11, 0);
+                mstmt.executeUpdate();
+                pwi++;
+            }
 
-            }catch (SQLException e) {
+        } catch (SQLException e) {
             System.out.print(e.getMessage());
         }
 
-            dbUtils.closeConnection(conn);
-            ServletContext context = getServletContext();
-            RequestDispatcher dispatcher = context.getRequestDispatcher("/dbLoad.jsp");
+        dbUtils.closeConnection(conn);
+        ServletContext context = getServletContext();
+        RequestDispatcher dispatcher = context.getRequestDispatcher("/dbLoad.jsp");
 
-            dispatcher.forward(request, response);
+        dispatcher.forward(request, response);
 
-        }
-
-    
+    }
 
     private static List<policy> setScore(List<policy> mypol) {
         Collections.sort(mypol, new polComparatorRDD());//sorted by rank-domination count-domination by category
@@ -174,8 +170,8 @@ public class UploadGame extends HttpServlet {
         int last_dom = 0;
         int last_score = 0;
         int prev_dom_by = 0;
+        int b=500;
         for (policy pol : mypol) {
-
             if (pol.getRank() == 1 && pol.getDominated() == 0 && pol.getDominatedbycategory() == 0) {
                 pol.setScore(top_score);
                 last_score = top_score;
@@ -191,15 +187,17 @@ public class UploadGame extends HttpServlet {
                 last_score -= step * 40;
             }
             if (pol.getDominatedbycategory() > prev_dom_by) {
-                last_score -= 10;
+                last_score -= 20;
             }
+             pol.setScore(last_score);
             prev_dom_by = pol.getDominatedbycategory();
-
-            if (last_score < 0) {
-                pol.setScore(0);
-            } else {
-                pol.setScore(last_score);
-            }
+        }
+        
+            int bottom=Math.abs(top_score-last_score);
+            int top=0;
+        for (policy pol : mypol) {
+            top=Math.abs(pol.getScore()-last_score)*b;
+            pol.setScore(top/bottom);
         }
         return mypol;
     }
