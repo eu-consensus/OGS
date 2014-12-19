@@ -523,21 +523,20 @@ public class RestGameBiofuels {
     }
 
     @GET
-    @Path("/prefscore/{table_name1}/{table_name2}/id")
+    @Path("/prefscore/{table_name1}/{table_name2}/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response prefscore(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("id") int id) {
-        int score = 0;
+        double score = 0;
         double THRESHOLD = 0.4;
         Connection conn = dbUtils.getConnection();
         String query1 = "SELECT * FROM " + table_name1;
-        String query2 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
-        JSONObject result = new JSONObject();
+        JSONObject retjson = new JSONObject();
         try {
             int total = 0;
             HashMap<String, Integer> myHash = new HashMap<>();
             HashMap<String, HashMap<String, Double>> preferenceOrder = new HashMap<>();
             HashMap<String, List<maj>> preference3 = new HashMap<>();
-
+            JSONObject result = new JSONObject();
             PreparedStatement stmt = conn.prepareStatement(query1);
             ResultSet res = stmt.executeQuery();
             ResultSetMetaData rsmd = res.getMetaData();
@@ -559,8 +558,13 @@ public class RestGameBiofuels {
             for (int i = 0; i < allobj; i++) {
                 obNames += "" + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + ", ";
             }
-
-            PreparedStatement stm = conn.prepareStatement(query2);
+            String select2 = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
+            String joinQuery2 = "SELECT " + select2
+                    + " FROM " + table_name2
+                    + " LEFT JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
+                    + " WHERE " + table_name1 + ".ID=?";
+            PreparedStatement stm = conn.prepareStatement(joinQuery2);
             stm.setInt(1, id);
             ResultSet resm = stm.executeQuery();
             Join_keep userkeep = new Join_keep(allobj);
@@ -646,12 +650,12 @@ public class RestGameBiofuels {
                 }
             }
             for (int i = 0; i < allobj; i++) {
-                double max_value = 0;
                 Iterator<Map.Entry<String, Double>> iterator = preferenceOrder.get(objn[i]).entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, Double> myentry = iterator.next();
                     if ((userkeep.getMyorder().toCharArray()[i] + "").equals(myentry.getKey())) {
                         score += 0.25;
+                         System.out.print("got 0.25 from priority in this objective");
                     }
                 }
             }
@@ -670,17 +674,18 @@ public class RestGameBiofuels {
             it = myHash.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
-                if (max_order < (int) pairs.getValue()) {
-                    max_order = (int) pairs.getValue();
-                } else {
+               if(max_order >(int)pairs.getValue()){
                     it.remove();
                 }
             }
             it = myHash.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pairs = (Map.Entry) it.next();
-                if (userkeep.getMyorder().equals(pairs.getKey()) && (double) pairs.getValue() / total >= THRESHOLD) {
-                    score += 1;
+                int val=(int)pairs.getValue();
+                double perc= (double)val/total;
+                if (userkeep.getMyorder().equals(pairs.getKey()) &&  perc>= THRESHOLD) {
+                    score += 0.5;
+                    System.out.print("got 0.5 from complete order");
                 }
             }
 //            create hash map for each priority
@@ -715,6 +720,7 @@ public class RestGameBiofuels {
             for (int i = 0; i < allobj; i++) {
                 if (userkeep.getData()[i] >= result.getJSONObject(objn[i]).getDouble("begin") && userkeep.getData()[i] <= result.getJSONObject(objn[i]).getDouble("end") && result.getJSONObject(objn[i]).getDouble("percentage") >= THRESHOLD) {
                     score += 0.25;
+                     System.out.print("got 0.25 for being within range in "+objn[i]);
                 }
             }
 
@@ -722,12 +728,14 @@ public class RestGameBiofuels {
             stmt.close();
             conn.close();
 
+            retjson.put("prefscore", score*10 );
         } catch (SQLException ex) {
             System.out.print(ex.getMessage());
         } catch (JSONException ex) {
             Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
         }
-        ResponseBuilder builder = Response.ok(Integer.toString(score*10));
+
+        ResponseBuilder builder = Response.ok(retjson.toString());
         return builder.build();
     }
 }

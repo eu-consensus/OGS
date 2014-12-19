@@ -151,7 +151,7 @@ public class UploadT extends HttpServlet {
             PreparedStatement statement = conn.prepareStatement(sql1);
             int exec = statement.executeUpdate();
 
-            int pwi = 0;
+
             stpar += "ID,policy";
             for (int i = 0; i < count_of_names; i++) {
                 stpar += ",parameter" + Integer.toString(i + 1) + "";
@@ -161,9 +161,9 @@ public class UploadT extends HttpServlet {
             }
 
             String query = "INSERT INTO " + tablename + " (" + stpar + ") " + "VALUES(?,?" + addobjp + addobjn + " )";
-
+            int pwi = 1;
             for (policy pol : mypol) {
-                pwi++;
+               
 
                 PreparedStatement stmt = conn.prepareStatement(query);
                 stmt.setInt(1, pwi);
@@ -177,6 +177,7 @@ public class UploadT extends HttpServlet {
                 }
 //                System.out.print(query);
                 stmt.executeUpdate();
+                 pwi++;
             }
         } catch (SQLException e) {
         }

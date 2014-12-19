@@ -103,7 +103,8 @@ public class UploadGame extends HttpServlet {
                     }
                 }
             }
-             res.first();
+             //res.first();
+             res.beforeFirst();
                 while (res.next()) {
                     policy pol = new policy(allobj, 0);
                     pol.setID(res.getInt(1));
@@ -118,7 +119,7 @@ public class UploadGame extends HttpServlet {
                     pol.setOrder(allobj, optimalValues,worseValues);
                     mypol.add(pol);
                 }
-                int pwi = 0;
+               
 
 //TODO ADD ALL IN pol so i can do math
                 Collections.sort(mypol, new polComparator());
@@ -130,9 +131,9 @@ public class UploadGame extends HttpServlet {
 
                 String mquery = "INSERT INTO " + name + " (ID,P_ID,distance,dominatedbycategory,dominatedbypool,rank,myorder,chosen,liked,objscore,prefscore) " + "VALUES(?,?,?,?,?,?,?,?,?,?,?)";
                 PreparedStatement mstmt = conn.prepareStatement(mquery);
+                int pwi = 1;
                 //   System.out.print(mquery);
                 for (policy pol : mypol4) {
-                    pwi++;
                     mstmt.setInt(1, pwi);
                     mstmt.setInt(2, pol.getID());
                     mstmt.setDouble(3, pol.getDistance());
@@ -145,6 +146,7 @@ public class UploadGame extends HttpServlet {
                     mstmt.setInt(10, pol.getScore());
                     mstmt.setInt(11, 0);
                     mstmt.executeUpdate();
+                    pwi++;
                 }
 
             }catch (SQLException e) {
