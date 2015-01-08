@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -34,22 +35,18 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-@WebServlet(name = "UploadT", urlPatterns = {"/UploadT"})
+@WebServlet(name = "UploadTransportationIBM", urlPatterns = {"/UploadTransportationIBM"})
 @MultipartConfig
-public class UploadT extends HttpServlet {
+public class UploadTransportationIBM extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
-        PrintWriter out = response.getWriter();
-        Part filePart = request.getPart("file");
-        String filename = getFilename(filePart);
-        InputStream filecontent = filePart.getInputStream();
-
+        URL oracle = new URL(request.getParameter("url").toString());
+        System.out.println(request.getParameter("url").toString());
         Integer count_of_names = Integer.parseInt(request.getParameter("countofnames"));
         String tablename = request.getParameter("dbname");
-//        boolean[] myminmax = methods.minmax(minmax);
         int ur = 0;
         int objectivecount = 0;
 
@@ -63,10 +60,13 @@ public class UploadT extends HttpServlet {
         String stpar = "";
         String[] criteria_names = new String[count_of_names];
         String line = "";
-        String splitBy = ";";
+        String splitBy = ",";
         try {
-            BufferedReader r = new BufferedReader(new InputStreamReader(filecontent, "UTF-8"));
+            BufferedReader r = new BufferedReader(new InputStreamReader(oracle.openStream(), "UTF-8"));
             while ((line = r.readLine()) != null) {
+                while (line.contains(",,")) {
+                    line = line.replaceAll(",,", ",");
+                }
                 String[] policy = line.split(splitBy);
                 String[] criteria_of_output = new String[count_of_names];
                 policy ppp = new policy(objectivecount, count_of_names);
@@ -118,8 +118,6 @@ public class UploadT extends HttpServlet {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            filecontent.close();
         }
         //    System.out.println(tablename);
 
@@ -151,7 +149,6 @@ public class UploadT extends HttpServlet {
             PreparedStatement statement = conn.prepareStatement(sql1);
             int exec = statement.executeUpdate();
 
-
             stpar += "ID,policy";
             for (int i = 0; i < count_of_names; i++) {
                 stpar += "," + criteria_names[i] + "";
@@ -161,9 +158,9 @@ public class UploadT extends HttpServlet {
             }
 
             String query = "INSERT INTO " + tablename + " (" + stpar + ") " + "VALUES(?,?" + addobjp + addobjn + " )";
+            System.out.print(query);
             int pwi = 1;
             for (policy pol : mypol) {
-               
 
                 PreparedStatement stmt = conn.prepareStatement(query);
                 stmt.setInt(1, pwi);
@@ -177,9 +174,10 @@ public class UploadT extends HttpServlet {
                 }
 //                System.out.print(query);
                 stmt.executeUpdate();
-                 pwi++;
+                pwi++;
             }
         } catch (SQLException e) {
+            System.out.print("foooo");
         }
         dbUtils.closeConnection(conn);
         ServletContext context = getServletContext();
@@ -189,15 +187,7 @@ public class UploadT extends HttpServlet {
 
     }
 
-    private static String getFilename(Part part) {
-        for (String cd : part.getHeader("content-disposition").split(";")) {
-            if (cd.trim().startsWith("filename")) {
-                String filename = cd.substring(cd.indexOf('=') + 1).trim().replace("\"", "");
-                return filename.substring(filename.lastIndexOf('/') + 1).substring(filename.lastIndexOf('\\') + 1);
-            }
-        }
-        return null;
-    }
+ 
 
     private static String createQM(int number) {
         String qm = "";
