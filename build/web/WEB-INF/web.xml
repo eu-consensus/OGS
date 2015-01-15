@@ -12,6 +12,14 @@
         <servlet-name>UploadERF</servlet-name>
         <servlet-class>servlets.UploadERF</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>UploadBiofuelsIBM</servlet-name>
+        <servlet-class>servlets.UploadBiofuelsIBM</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>Upload_Biofuels_First_pol_name</servlet-name>
+        <servlet-class>servlets.Upload_Biofuels_First_pol_name</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>ExcelApi</servlet-name>
         <url-pattern>/ExcelApi</url-pattern>
@@ -23,6 +31,14 @@
     <servlet-mapping>
         <servlet-name>UploadERF</servlet-name>
         <url-pattern>/UploadERF</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UploadBiofuelsIBM</servlet-name>
+        <url-pattern>/UploadBiofuelsIBM</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>Upload_Biofuels_First_pol_name</servlet-name>
+        <url-pattern>/Upload_Biofuels_First_pol_name</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package servlets;
 
 import java.io.BufferedReader;
@@ -28,25 +23,26 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
-import methods.dbUtils;
-import methods.policy;
+import methods.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-@WebServlet(name = "UploadTransportationIBM", urlPatterns = {"/UploadTransportationIBM"})
+@WebServlet(name = "UploadBiofuelsIBM", urlPatterns = {"/UploadBiofuelsIBM"})
 @MultipartConfig
-public class UploadTransportationIBM extends HttpServlet {
+public class UploadBiofuelsIBM extends HttpServlet {
+
+    static int COUNT_OF_NAMES = 8;//the 9nth is the name of the policy
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
         URL oracle = new URL(request.getParameter("url").toString());
-     //   System.out.println(request.getParameter("url").toString());
         Integer count_of_names = Integer.parseInt(request.getParameter("countofnames"));
         String tablename = request.getParameter("dbname");
+
         int ur = 0;
         int objectivecount = 0;
 
@@ -58,9 +54,9 @@ public class UploadTransportationIBM extends HttpServlet {
         String addobjp = "";
         String addobjn = "";
         String stpar = "";
-        String[] criteria_names = new String[count_of_names];
         String line = "";
         String splitBy = ",";
+
         try {
             BufferedReader r = new BufferedReader(new InputStreamReader(oracle.openStream(), "UTF-8"));
             while ((line = r.readLine()) != null) {
@@ -71,47 +67,59 @@ public class UploadTransportationIBM extends HttpServlet {
                 String[] criteria_of_output = new String[count_of_names];
                 policy ppp = new policy(objectivecount, count_of_names);
                 if (ur == 0) {
+                    if (policy[2] != null) {
+                        tablename = policy[2] + "_";
+                    }
+                }
+                if (ur == 1) {
+                    if (policy[2] != null) {
+                        tablename += policy[2];
+                    }
+                }
+                if ((ur == 2)) {
                     for (int i = 0; i < policy.length; i++) {
-                        if (i < count_of_names) {
-                            String wget = policy[i].replaceAll(" ", "");
-                            wget = wget.replaceAll("%", "");
-                            wget = wget.replaceAll("-", "");
-                            wget = wget.replaceAll("[(]", "_");
-                            wget = wget.replaceAll("[)]", "_");
-                            criteria_names[i] = wget;
-                        } else {
-                            String wget = policy[i].replaceAll(" ", "");
-                            wget = wget.replaceAll("%", "");
-                            wget = wget.replaceAll("-", "");
-                            wget = wget.replaceAll("[(]", "_");
-                            wget = wget.replaceAll("[)]", "_");
+                        if (!policy[i].equals("")) {
+                            String wget = policy[i];
+                            if (wget.contains(". ")) {
+                                wget = wget.replaceAll(". ", "");
+                            }
+                            if (wget.contains("/")) {
+                                wget = wget.replaceAll("/", "");
+                            }
+                            if (wget.contains(" ")) {
+                                wget = wget.replaceAll(" ", "");
+                            }
+
                             pol_names.add(wget);
                         }
                     }
-                } else {
+                }
+                if (ur > 2) {
                     for (int i = 0; i < policy.length; i++) {
-                        if (i < count_of_names) {
-                            String wget = policy[i].replaceAll(" ", "");
-                            wget = wget.replaceAll("%", "");
-                            wget = wget.replaceAll("-", "");
-                            criteria_of_output[i] = wget;
+                        if (i == 0) {
+                            ppp.setPolicyName(policy[0]);
+                        } else if (i < count_of_names + 1) {
+                            criteria_of_output[i - 1] = policy[i];
                         } else {
-                            table2.add(Double.parseDouble(policy[i].replace(',', '.')));
+                            table2.add(Double.parseDouble(policy[i]));
                         }
+                        // for (int opip = 0; opip < criteria_of_output.length; opip++) {
+                        //     System.out.println(criteria_of_output[opip]);
+                        // }
                     }
-                    objectivecount = policy.length - count_of_names;
+                    objectivecount = policy.length - COUNT_OF_NAMES - 1;
                     int uobj = 0;
                     double[] objValues = new double[objectivecount];
                     for (double tab : table2) {
                         objValues[uobj] = tab;
                         uobj++;
                     }
-                    ppp.setPolicyName("consensus_output_ERF-" + Integer.toString(ur));
                     ppp.setPolicyParameters(criteria_of_output);
                     ppp.setObjectives(objValues);
                     mypol.add(ppp);
                     table2.clear();
                 }
+
                 ur++;
             }
         } catch (FileNotFoundException e) {
@@ -120,15 +128,17 @@ public class UploadTransportationIBM extends HttpServlet {
             e.printStackTrace();
         }
         //    System.out.println(tablename);
-
-        /*    for(int i=0;i<obj_names.length;i++){
-         System.out.println(obj_names[i]);
-         }
-         */
-        for (int i = 0; i < count_of_names; i++) {
-            objp += "," + criteria_names[i] + " VARCHAR(255) ";
+        String[] obj_names = new String[pol_names.size()];
+        int i365 = 0;
+        for (String pol : pol_names) {
+            obj_names[i365] = pol + "";
+            i365++;
         }
-        for (String obj : pol_names) {
+
+        for (int i = 0;i < count_of_names;i++) {
+            objp += ",parameter" + Integer.toString(i + 1) + " VARCHAR(255) ";
+        }
+        for (String obj : obj_names) {
             objn += "," + obj + " DOUBLE";
         }
 
@@ -141,7 +151,7 @@ public class UploadTransportationIBM extends HttpServlet {
                 + ")";
 
         System.out.print(sql1);
-        addobjn = createQM(pol_names.size());
+        addobjn = createQM(obj_names.length);
         addobjp = createQM(count_of_names);
         Connection conn = dbUtils.getConnection();
 
@@ -149,18 +159,19 @@ public class UploadTransportationIBM extends HttpServlet {
             PreparedStatement statement = conn.prepareStatement(sql1);
             int exec = statement.executeUpdate();
 
+            int pwi = 0;
             stpar += "ID,policy";
             for (int i = 0; i < count_of_names; i++) {
-                stpar += "," + criteria_names[i] + "";
+                stpar += ",parameter" + Integer.toString(i + 1) + "";
             }
-            for (String obj : pol_names) {
+            for (String obj : obj_names) {
                 stpar += "," + obj + "";
             }
 
             String query = "INSERT INTO " + tablename + " (" + stpar + ") " + "VALUES(?,?" + addobjp + addobjn + " )";
-            System.out.print(query);
-            int pwi = 1;
+
             for (policy pol : mypol) {
+                pwi++;
 
                 PreparedStatement stmt = conn.prepareStatement(query);
                 stmt.setInt(1, pwi);
@@ -168,16 +179,14 @@ public class UploadTransportationIBM extends HttpServlet {
                 for (int num = 0; num < count_of_names; num++) {
                     stmt.setString(num + 3, pol.getPolicyParameters()[num]);
                 }
-                for (int num = 0; num < pol_names.size(); num++) {
-                    stmt.setDouble(num + count_of_names + 3, (double) Math.round(pol.getObjectives()[num] * 1000000) / 1000000);
+                for (int num = 0; num < obj_names.length; num++) {
+                    stmt.setDouble(num + count_of_names + 3, (double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
                     //   System.out.print((double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
                 }
 //                System.out.print(query);
                 stmt.executeUpdate();
-                pwi++;
             }
         } catch (SQLException e) {
-            System.out.print("foooo");
         }
         dbUtils.closeConnection(conn);
         ServletContext context = getServletContext();
@@ -187,8 +196,6 @@ public class UploadTransportationIBM extends HttpServlet {
 
     }
 
- 
-
     private static String createQM(int number) {
         String qm = "";
         for (int i = 0; i < number; i++) {
@@ -197,17 +204,20 @@ public class UploadTransportationIBM extends HttpServlet {
         return qm;
     }
 
-    private static String readString(InputStream is) throws IOException {
-        char[] buf = new char[2048];
-        Reader r = new InputStreamReader(is, "UTF-8");
-        StringBuilder s = new StringBuilder();
-        while (true) {
-            int n = r.read(buf);
-            if (n < 0) {
-                break;
-            }
-            s.append(buf, 0, n);
+    private static String[] pol_name(List<String> tpol) {
+        int psize = tpol.size() / 2;
+        String[] names = new String[psize];
+        for (int i = 0; i < psize; i++) {
+            names[i] = "";
         }
-        return s.toString();
+        int i = 0;
+        for (String pol : tpol) {
+            names[i] += pol + "";
+            i++;
+            if (i == (psize)) {
+                i = 0;
+            }
+        }
+        return names;
     }
 }
