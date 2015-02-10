@@ -408,7 +408,7 @@ public class RestGameBiofuels {
             HashMap<String, List<maj>> preferenceOrder = new HashMap<>();
 //            create hash map for each priority
             for (int i = 0; i < allobj; i++) {
-                preferenceOrder.put(objn[i], new ArrayList<>());
+                preferenceOrder.put(objn[i], new ArrayList<maj>());
             }
             //put values in tables
             for (Join_keep temp : mylist) {
@@ -690,7 +690,7 @@ public class RestGameBiofuels {
             }
 //            create hash map for each priority
             for (int i = 0; i < allobj; i++) {
-                preference3.put(objn[i], new ArrayList<>());
+                preference3.put(objn[i], new ArrayList<maj>());
             }
             //put values in tables
             for (Join_keep temp : mylist) {
