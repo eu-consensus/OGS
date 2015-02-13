@@ -183,12 +183,12 @@ public class policy {
             for (int i = 0; i < objectives_number; i++) {
 
                 if (sorted2[j] == sorted[i]) {
-                    thisorder[j] = i;
+                    thisorder[j] = i+1;
                 }
             }
         }
 
-        for (int u = 0; u < thisorder.length; u++) {
+        for (int u = thisorder.length-1; u >=0; u--) {
             myorder += thisorder[u];
         }
         this.order = myorder;
