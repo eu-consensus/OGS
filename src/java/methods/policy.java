@@ -171,9 +171,9 @@ public class policy {
     public void setOrder(int objectives_number,double[] optimalValue,double[] worseValue) {
         //in order to create the right order we need to substract from the total number of objectives
         int[] thisorder = new int[objectives_number];
-        double[] sorted = objectives.clone();
+        double[] sorted = new double[objectives.length];
         for(int i=0;i<objectives_number;i++){
-            sorted[i]=Math.abs(sorted[i]-worseValue[i])/Math.abs(optimalValue[i]-worseValue[i]);
+            sorted[i]=Math.abs(objectives[i]-worseValue[i])/Math.abs(optimalValue[i]-worseValue[i]);
         }
          double[] sorted2 = sorted.clone();
         Arrays.sort(sorted2);
@@ -183,7 +183,7 @@ public class policy {
             for (int i = 0; i < objectives_number; i++) {
 
                 if (sorted2[j] == sorted[i]) {
-                    thisorder[j] = objectives_number - i;
+                    thisorder[j] = i;
                 }
             }
         }
