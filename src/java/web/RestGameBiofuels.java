@@ -761,8 +761,8 @@ public class RestGameBiofuels {
                 }
             }
             String[] objp = new String[param];
-            for(int i=0;i<param;i++){
-                objp[i]=rsmd.getColumnName(i+1);
+            for (int i = 0; i < param; i++) {
+                objp[i] = rsmd.getColumnName(i + 1);
             }
             int allobj = columnsNumber - param - 1;
             String[] objn = new String[allobj];
@@ -778,7 +778,7 @@ public class RestGameBiofuels {
             for (int i = 1; i < param; i++) {
                 parNames += "" + table_name1 + "." + rsmd.getColumnName(2 + i) + ", ";
             }
-            String select2 = "" + table_name1 + ".ID,"+ table_name1 + ".policy," + parNames +obNames + table_name2 + ".chosen";
+            String select2 = "" + table_name1 + ".ID," + table_name1 + ".policy," + parNames + obNames + table_name2 + ".chosen";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
                     + " LEFT JOIN " + table_name1
@@ -787,7 +787,7 @@ public class RestGameBiofuels {
             PreparedStatement stm = conn.prepareStatement(joinQuery2);
             stm.setString(1, id);
             ResultSet resm = stm.executeQuery();
-            
+
             JSONArray mylist = new JSONArray();
             while (resm.next()) {
                 JSONObject policy = new JSONObject();
@@ -797,6 +797,71 @@ public class RestGameBiofuels {
                     policy.put(rsmd.getColumnName(i), resm.getString(i));
                 }
                 for (int i = param + 2; i < allobj + param + 2; i++) {
+                    policy.put(rsmd.getColumnName(i), resm.getDouble(i));
+                }
+
+                mylist.put(policy);
+            }
+            stmt.close();
+            conn.close();
+
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put("result on " + reportDate, mylist);
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/orderbypercentage/{table_name1}/{table_name2}/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getbyOrderPercentage(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("id") String id) {
+
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+
+            int allobj = columnsNumber - 3;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(3 + i);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "" + table_name1 + "." + rsmd.getColumnName(3 + i) + ", ";
+            }
+
+            String select2 = "" + table_name1 + ".ID," + table_name1 + ".policy," + obNames + table_name2 + ".chosen";
+            String joinQuery2 = "SELECT " + select2
+                    + " FROM " + table_name2
+                    + " LEFT JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                    + " WHERE " + table_name2 + ".myorder=?";
+            PreparedStatement stm = conn.prepareStatement(joinQuery2);
+            stm.setString(1, id);
+            ResultSet resm = stm.executeQuery();
+
+            JSONArray mylist = new JSONArray();
+            while (resm.next()) {
+                JSONObject policy = new JSONObject();
+                policy.put(rsmd.getColumnName(1), resm.getInt(1));
+                policy.put(rsmd.getColumnName(2), resm.getString(2));
+                for (int i = 4; i < allobj + 4; i++) {
                     policy.put(rsmd.getColumnName(i), resm.getDouble(i));
                 }
 
