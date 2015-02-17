@@ -553,7 +553,7 @@ public class RestGameTransportation {
             while (resm.next()) {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), resm.getInt(1));
-                policy.put(rsmd.getColumnName(2), resm.getString(2));
+                policy.put(rsmd.getColumnName(3), resm.getString(3));
                 for (int i = 4; i < allobj + 4; i++) {
                     policy.put(rsmd.getColumnName(i), resm.getDouble(i));
                 }
