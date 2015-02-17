@@ -82,8 +82,6 @@ public class RestGameBiofuels {
             String reportDate = df.format(today);
             result.put("result on " + reportDate, mylist);
             stmt.close();
-            conn.close();
-
         } catch (JSONException e) {
             e.printStackTrace();
         } catch (SQLException ex) {
@@ -778,7 +776,7 @@ public class RestGameBiofuels {
             for (int i = 1; i < param; i++) {
                 parNames += "" + table_name1 + "." + rsmd.getColumnName(2 + i) + ", ";
             }
-            String select2 = "" + table_name1 + ".ID," + table_name1 + ".policy," + parNames + obNames + table_name2 + ".chosen";
+            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + parNames + obNames + table_name2 + ".objscore";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
                     + " LEFT JOIN " + table_name1
@@ -799,7 +797,7 @@ public class RestGameBiofuels {
                 for (int i = param + 2; i < allobj + param + 2; i++) {
                     policy.put(rsmd.getColumnName(i), resm.getDouble(i));
                 }
-
+                policy.put("objscore", resm.getInt(allobj + param + 1));
                 mylist.put(policy);
             }
             stmt.close();
@@ -846,7 +844,7 @@ public class RestGameBiofuels {
                 obNames += "" + table_name1 + "." + rsmd.getColumnName(3 + i) + ", ";
             }
 
-            String select2 = "" + table_name1 + ".ID," + table_name1 + ".policy," + obNames + table_name2 + ".chosen";
+            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + obNames + table_name2 + ".objscore";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
                     + " LEFT JOIN " + table_name1
@@ -864,7 +862,7 @@ public class RestGameBiofuels {
                 for (int i = 4; i < allobj + 4; i++) {
                     policy.put(rsmd.getColumnName(i), resm.getDouble(i));
                 }
-
+                policy.put("objscore", resm.getInt(allobj + 3));
                 mylist.put(policy);
             }
             stmt.close();
@@ -880,6 +878,122 @@ public class RestGameBiofuels {
             Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/increaseChosen/{table_name1}/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response increaseChosen(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("id") int id) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+        JSONObject result = new JSONObject();
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt.setInt(1, id);
+
+            ResultSet res = stmt.executeQuery();
+            if (res.next()) {
+                System.out.print(res.getInt(8));
+                Integer chosen = res.getInt(8);
+                chosen++;
+                res.updateInt(8, chosen);
+                res.updateRow();
+            }
+            String query2 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+            PreparedStatement stmt2 = conn.prepareStatement(query2, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt2.setInt(1, id);
+            ResultSet resm = stmt2.executeQuery();
+            ResultSetMetaData rsmd = resm.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+
+            JSONArray mylist = new JSONArray();
+            while (resm.next()) {
+                JSONObject policy = new JSONObject();
+                policy.put(rsmd.getColumnName(1), res.getInt(1));
+                policy.put(rsmd.getColumnName(2), res.getInt(2));
+                policy.put(rsmd.getColumnName(3), res.getInt(3));
+                policy.put(rsmd.getColumnName(4), res.getInt(4));
+                policy.put(rsmd.getColumnName(5), res.getInt(5));
+                policy.put(rsmd.getColumnName(6), res.getInt(6));
+                policy.put(rsmd.getColumnName(7), res.getString(7));
+                policy.put(rsmd.getColumnName(8), res.getInt(8));
+                policy.put(rsmd.getColumnName(9), res.getInt(9));
+                policy.put(rsmd.getColumnName(10), res.getInt(10));
+                policy.put(rsmd.getColumnName(11), res.getInt(11));
+                mylist.put(policy);
+            }
+
+            dbUtils.closeConnection(conn);
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put("result on " + reportDate, mylist);
+            stmt.close();
+            stmt2.close();
+
+        } catch (Exception exception) {
+            System.out.printf(exception.getMessage());
+        }
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/decreaseChosen/{table_name1}/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response decreaseChosen(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("id") int id) {
+        Connection conn = dbUtils.getConnection();
+        String query1 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+        JSONObject result = new JSONObject();
+        try {
+            PreparedStatement stmt = conn.prepareStatement(query1, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt.setInt(1, id);
+
+            ResultSet res = stmt.executeQuery();
+            if (res.next()) {
+                System.out.print(res.getInt(8));
+                Integer chosen = res.getInt(8);
+                chosen--;
+                res.updateInt(8, chosen);
+                res.updateRow();
+            }
+            String query2 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+            PreparedStatement stmt2 = conn.prepareStatement(query2, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            stmt2.setInt(1, id);
+            ResultSet resm = stmt2.executeQuery();
+            ResultSetMetaData rsmd = resm.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+
+            JSONArray mylist = new JSONArray();
+            while (resm.next()) {
+                JSONObject policy = new JSONObject();
+                policy.put(rsmd.getColumnName(1), res.getInt(1));
+                policy.put(rsmd.getColumnName(2), res.getInt(2));
+                policy.put(rsmd.getColumnName(3), res.getInt(3));
+                policy.put(rsmd.getColumnName(4), res.getInt(4));
+                policy.put(rsmd.getColumnName(5), res.getInt(5));
+                policy.put(rsmd.getColumnName(6), res.getInt(6));
+                policy.put(rsmd.getColumnName(7), res.getString(7));
+                policy.put(rsmd.getColumnName(8), res.getInt(8));
+                policy.put(rsmd.getColumnName(9), res.getInt(9));
+                policy.put(rsmd.getColumnName(10), res.getInt(10));
+                policy.put(rsmd.getColumnName(11), res.getInt(11));
+                mylist.put(policy);
+            }
+
+            dbUtils.closeConnection(conn);
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put("result on " + reportDate, mylist);
+            stmt.close();
+            stmt2.close();
+
+        } catch (Exception exception) {
+            System.out.printf(exception.getMessage());
+        }
         ResponseBuilder builder = Response.ok(result.toString());
         return builder.build();
     }
