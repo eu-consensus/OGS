@@ -33,7 +33,7 @@ public class policy {
     private int ni;
     private int ID;
 
-    public policy(int number,int number2) {
+    public policy(int number, int number2) {
         this.objectives = new double[number];
         this.score = 0;
         this.dominated = 0;
@@ -44,9 +44,9 @@ public class policy {
         this.SiR = "";
         this.rank = 0;
         this.ni = 0;
-        this.policyParameters=new String[number2];
+        this.policyParameters = new String[number2];
         this.policyName = "";
-        this.ID=0;
+        this.ID = 0;
     }
 
     public int getID() {
@@ -76,7 +76,6 @@ public class policy {
             this.SiR = SiR + " , " + this.SiR;
         }
     }
-
 
     public int getNi() {
         return ni;
@@ -168,14 +167,16 @@ public class policy {
         return order;
     }
 
-    public void setOrder(int objectives_number,double[] optimalValue,double[] worseValue) {
+    public void setOrder(int objectives_number, double[] optimalValue, double[] worseValue) {
         //in order to create the right order we need to substract from the total number of objectives
         int[] thisorder = new int[objectives_number];
-        double[] sorted = objectives.clone();
-        for(int i=0;i<objectives_number;i++){
-            sorted[i]=Math.abs(sorted[i]-worseValue[i])/Math.abs(optimalValue[i]-worseValue[i]);
+        int[] fthisorder1 = new int[objectives_number];
+        int[] fthisorder2 = new int[objectives_number];
+        double[] sorted = new double[objectives.length];
+        for (int i = 0; i < objectives_number; i++) {
+            sorted[i] = Math.abs(objectives[i] - worseValue[i]) / Math.abs(optimalValue[i] - worseValue[i]);
         }
-         double[] sorted2 = sorted.clone();
+        double[] sorted2 = sorted.clone();
         Arrays.sort(sorted2);
         String myorder = "";
         //TODO fix O() add equals in same order value
@@ -183,13 +184,21 @@ public class policy {
             for (int i = 0; i < objectives_number; i++) {
 
                 if (sorted2[j] == sorted[i]) {
-                    thisorder[j] = objectives_number - i;
+                    thisorder[j] = i;
                 }
             }
         }
+        int i=0;
+        for (int u = thisorder.length-1; u >=0; u--) {
 
+            fthisorder1[i]= thisorder[u];
+                        i++;
+        }
+        for (int u = 0; u < fthisorder1.length; u++) {
+            fthisorder2[fthisorder1[u]] = u + 1;
+        }
         for (int u = 0; u < thisorder.length; u++) {
-            myorder += thisorder[u];
+            myorder += fthisorder2[u];
         }
         this.order = myorder;
     }
