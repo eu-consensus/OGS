@@ -10,7 +10,10 @@ package methods;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -169,12 +172,16 @@ public class policy {
 
     public void setOrder(int objectives_number, double[] optimalValue, double[] worseValue) {
         //in order to create the right order we need to substract from the total number of objectives
-        int[] thisorder = new int[objectives_number];
+        Hashtable<String, List<Integer>> thisorder = new Hashtable<>();
         int[] fthisorder1 = new int[objectives_number];
         int[] fthisorder2 = new int[objectives_number];
         double[] sorted = new double[objectives.length];
         for (int i = 0; i < objectives_number; i++) {
-            sorted[i] = Math.abs(objectives[i] - worseValue[i]) / Math.abs(optimalValue[i] - worseValue[i]);
+            if (worseValue[i] == optimalValue[i]) {
+                sorted[i] = 1;//exeis to kalitero dunato pososto megisti timi
+            } else {
+                sorted[i] = Math.abs(objectives[i] - worseValue[i]) / Math.abs(optimalValue[i] - worseValue[i]);
+            }
         }
         double[] sorted2 = sorted.clone();
         Arrays.sort(sorted2);
@@ -184,23 +191,39 @@ public class policy {
             for (int i = 0; i < objectives_number; i++) {
 
                 if (sorted2[j] == sorted[i]) {
-                    thisorder[j] = i;
+                    if (thisorder.containsKey(Integer.toString(j))) {
+                        thisorder.get(Integer.toString(j)).add(i);
+                    } else {
+                        List<Integer> ml = new ArrayList<>();
+                        ml.add(i);
+                        thisorder.put(Integer.toString(j), ml);
+                    }
                 }
             }
         }
-        int i=0;
-        for (int u = thisorder.length-1; u >=0; u--) {
+        int i = 0;
+        boolean dble=false;
+        for (int u = thisorder.size() - 1; u >= 0; u--) {
+            if (thisorder.get(Integer.toString(u)).size() > 1) {
+                for (int temp : thisorder.get(Integer.toString(u))) {
+                    fthisorder1[temp] = i + 1;
+                }
+                dble=true;
+            }else{
+                if(dble){
+                    i+=thisorder.get(Integer.toString(u+1)).size()-1;
+                    dble=false;
+                }
+                for (int temp : thisorder.get(Integer.toString(u))) {
+                    fthisorder1[temp] = i + 1;
+                }
+                 i++;
+                }
+            }
+            for (int u = 0; u < fthisorder1.length; u++) {
+                myorder += fthisorder1[u];
+            }
+            this.order = myorder;
+        }
 
-            fthisorder1[i]= thisorder[u];
-                        i++;
-        }
-        for (int u = 0; u < fthisorder1.length; u++) {
-            fthisorder2[fthisorder1[u]] = u + 1;
-        }
-        for (int u = 0; u < thisorder.length; u++) {
-            myorder += fthisorder2[u];
-        }
-        this.order = myorder;
     }
-
-}
