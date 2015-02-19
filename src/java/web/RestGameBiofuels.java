@@ -836,12 +836,12 @@ public class RestGameBiofuels {
             int allobj = columnsNumber - 3;
             String[] objn = new String[allobj];
             for (int i = 0; i < allobj; i++) {
-                objn[i] = rsmd.getColumnName(3 + i);
+                objn[i] = rsmd.getColumnName(4 + i);
             }
             //get obj names to perform the join query
             String obNames = "";
             for (int i = 0; i < allobj; i++) {
-                obNames += "" + table_name1 + "." + rsmd.getColumnName(3 + i) + ", ";
+                obNames += "" + table_name1 + "." + rsmd.getColumnName(4 + i) + ", ";
             }
 
             String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + obNames + table_name2 + ".objscore";
@@ -858,9 +858,9 @@ public class RestGameBiofuels {
             while (resm.next()) {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), resm.getInt(1));
-                policy.put(rsmd.getColumnName(3), resm.getString(3));
+                policy.put(rsmd.getColumnName(3), resm.getString(2));
                 for (int i = 4; i < allobj + 4; i++) {
-                    policy.put(rsmd.getColumnName(i), resm.getDouble(i));
+                    policy.put(rsmd.getColumnName(i), resm.getDouble(i-1));
                 }
                 policy.put("objscore", resm.getInt(allobj + 3));
                 mylist.put(policy);
