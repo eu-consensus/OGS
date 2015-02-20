@@ -202,28 +202,49 @@ public class policy {
             }
         }
         int i = 1;
-        boolean dble=false;
+        boolean dble = false;
         for (int u = thisorder.size() - 1; u >= 0; u--) {
             if (thisorder.get(Integer.toString(u)).size() > 1) {
-                for (int temp : thisorder.get(Integer.toString(u))) {
-                    fthisorder1[temp] = i ;
+                if (u != thisorder.size() - 1) {//if not first element
+                    if (thisorder.get(Integer.toString(u + 1)).equals(thisorder.get(Integer.toString(u)))&& dble) {//if the next priority list is the same give the same priority
+                        for (int temp : thisorder.get(Integer.toString(u))) {
+                            fthisorder1[temp] = i;
+                        }
+                    } else {//if the next priority list is NOT the same give for 3 elements +3
+                        if(dble){
+                            i += thisorder.get(Integer.toString(u + 1)).size();
+                        }
+                        for (int temp : thisorder.get(Integer.toString(u))) {
+                            fthisorder1[temp] = i;
+                        }
+                    }
+                } else {
+                    for (int temp : thisorder.get(Integer.toString(u))) {
+                        fthisorder1[temp] = i;
+                    }
                 }
-                dble=true;
-            }else{
-                if(dble){
-                    i+=thisorder.get(Integer.toString(u+1)).size();
-                    dble=false;
+                dble = true;
+            } else {
+                if (dble) {//if i had {} before  then the next priority += how many elements in {} -1
+                    i += thisorder.get(Integer.toString(u + 1)).size();
+                    dble = false;
+                    for (int temp : thisorder.get(Integer.toString(u))) {
+                        fthisorder1[temp] = i;
+                    }
+                    i++;
+                } else {
+                    for (int temp : thisorder.get(Integer.toString(u))) {
+                        fthisorder1[temp] = i;
+                    }
+                    i++;
                 }
-                for (int temp : thisorder.get(Integer.toString(u))) {
-                    fthisorder1[temp] = i ;
-                }
-                 i++;
-                }
-            }
-            for (int u = 0; u < fthisorder1.length; u++) {
-                myorder += fthisorder1[u];
-            }
-            this.order = myorder;
-        }
 
+            }
+        }
+        for (int u = 0; u < fthisorder1.length; u++) {
+            myorder += fthisorder1[u];
+        }
+        this.order = myorder;
     }
+
+}
