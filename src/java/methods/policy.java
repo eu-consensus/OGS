@@ -201,21 +201,21 @@ public class policy {
                 }
             }
         }
-        int i = 0;
+        int i = 1;
         boolean dble=false;
         for (int u = thisorder.size() - 1; u >= 0; u--) {
             if (thisorder.get(Integer.toString(u)).size() > 1) {
                 for (int temp : thisorder.get(Integer.toString(u))) {
-                    fthisorder1[temp] = i + 1;
+                    fthisorder1[temp] = i ;
                 }
                 dble=true;
             }else{
                 if(dble){
-                    i+=thisorder.get(Integer.toString(u+1)).size()-1;
+                    i+=thisorder.get(Integer.toString(u+1)).size();
                     dble=false;
                 }
                 for (int temp : thisorder.get(Integer.toString(u))) {
-                    fthisorder1[temp] = i + 1;
+                    fthisorder1[temp] = i ;
                 }
                  i++;
                 }
