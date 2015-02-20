@@ -77,4 +77,47 @@ public class Percentage {
         return builder.build();
     }
 
+    @GET
+    @Path("/{table_name}/{policy}")
+    @Produces(MediaType.APPLICATION_JSON)
+
+    public Response getAll(@Context HttpServletRequest request, @PathParam("table_name") String table_name, @PathParam("policy") String pol) {
+        JSONObject result = new JSONObject();
+        try {
+            Connection conn = dbUtils.getConnection();
+
+            String query = "SELECT * FROM "+table_name+" WHERE policy=?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, pol);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+
+            int allobj = columnsNumber - 3;
+            JSONArray mylist = new JSONArray();
+
+            while (res.next()) {
+                JSONObject policy = new JSONObject();
+                policy.put(rsmd.getColumnName(1), res.getInt(1));
+                policy.put(rsmd.getColumnName(2), res.getString(2));
+
+                for (int i = 3; i < allobj + 3; i++) {
+                    policy.put(rsmd.getColumnName(i + 1), res.getDouble(i + 1));
+                }
+
+                mylist.put(policy);
+            }
+            dbUtils.closeConnection(conn);
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put("result on " + reportDate, mylist);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (SQLException ex) {
+            Logger.getLogger(RestBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        Response.ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
 }
