@@ -55,22 +55,25 @@ public class Goal_achievement extends HttpServlet {
                     param++;
                 }
             }
-            String[] objp = new String[param];
-            for (int i = 0; i < param; i++) {
-                objp[i] = rsmd.getColumnName(i + 1);
+            String[] objp = new String[param-1];
+            for (int i = 0; i < param-1; i++) {
+                objp[i] = rsmd.getColumnName(i + 3);
             }
             int allobj = columnsNumber - param - 1;
 
             String[] objn = new String[allobj];
             for (int i = 0; i < allobj; i++) {
-                objn[i] = rsmd.getColumnName(param + 2+ i);
+                objn[i] = rsmd.getColumnName(param + 2 + i);
             }
             //get obj names to perform the join query
             String obNames = "";
             for (int i = 0; i < allobj; i++) {
                 obNames += "," + rsmd.getColumnName(param + 2 + i) + " DOUBLE";
             }
-           
+            String parNames = "";
+            for (int i = 0; i < param-1; i++) {
+                parNames += "," + objp[i] + " VARCHAR(255) ";
+            }
             optimalValues = new double[allobj];
             worseValues = new double[allobj];
             if (res.next()) {
@@ -110,14 +113,18 @@ public class Goal_achievement extends HttpServlet {
                 pol.setID(res.getInt(1));
                 pol.setPolicyName(res.getString(2));
                 double[] obj_values = new double[allobj];
-
-                for (int i = 0; i < allobj; i++) {                    
-                    if(worseValues[i]==optimalValues[i]){
-                        obj_values[i]=1.0;
-                    }else{
-                    obj_values[i] = Math.abs(res.getDouble(beforeobj + i) - worseValues[i]) / Math.abs(optimalValues[i] - worseValues[i]);
+                String[] objn_values=new String[param];
+                for (int i = 0; i < param-1; i++) {
+                 objn_values[i]=res.getString(i+3);
+                }
+                 pol.setPolicyParameters(objn_values);
+                for (int i = 0; i < allobj; i++) {
+                    if (worseValues[i] == optimalValues[i]) {
+                        obj_values[i] = 1.0;
+                    } else {
+                        obj_values[i] = Math.abs(res.getDouble(beforeobj + i) - worseValues[i]) / Math.abs(optimalValues[i] - worseValues[i]);
                     }
-                   
+
                 }
                 pol.setObjectives(obj_values);
                 mypol.add(pol);
@@ -127,27 +134,36 @@ public class Goal_achievement extends HttpServlet {
                     + "(ID INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, "
                     + "P_ID INTEGER NOT NULL, FOREIGN KEY (P_ID) REFERENCES " + tablename + "(ID)"
                     + " ,policy VARCHAR(255) "
+                    + parNames
                     + obNames
                     + ")";
             PreparedStatement statement = conn.prepareStatement(sql1);
             int exec = statement.executeUpdate();
+            addobjp = createQM(objp.length);
             addobjn = createQM(objn.length);
-                stpar += "ID,P_ID,policy";
+            stpar += "ID,P_ID,policy";
+            for (int i = 0; i < param-1; i++) {
+                stpar += ",parameter" + Integer.toString(i + 1) + "";
+            }
             for (String obj : objn) {
                 stpar += "," + obj + "";
             }
 
-            String mquery = "INSERT INTO " + name + " (" + stpar + ") " + "VALUES(?,?,?" + addobjn + " )";      
+            String mquery = "INSERT INTO " + name + " (" + stpar + ") " + "VALUES(?,?,?" + addobjp + addobjn + " )";
             PreparedStatement mstmt = conn.prepareStatement(mquery);
             int pwi = 1;
             //   System.out.print(mquery);
             for (policy pol : mypol) {
                 mstmt.setInt(1, pwi);
-                mstmt.setInt(2, pol.getID());                
+                mstmt.setInt(2, pol.getID());
                 mstmt.setString(3, pol.getPolicyName());
+                for (int num = 0; num < objp.length; num++) {
+                    mstmt.setString(num + 4, (pol.getPolicyParameters()[num]));
+                    //   System.out.print((double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
+                }
                 for (int num = 0; num < objn.length; num++) {
-                    mstmt.setDouble(num + 4, (pol.getObjectives()[num])*100);
-                 //   System.out.print((double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
+                    mstmt.setDouble(num + param+3, (pol.getObjectives()[num]) * 100);
+                    //   System.out.print((double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
                 }
 //                System.out.print(query);
                 mstmt.executeUpdate();
@@ -165,8 +181,7 @@ public class Goal_achievement extends HttpServlet {
 
     }
 
-   
-        private static String createQM(int number) {
+    private static String createQM(int number) {
         String qm = "";
         for (int i = 0; i < number; i++) {
             qm += ",?";

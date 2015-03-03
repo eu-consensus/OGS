@@ -30,7 +30,7 @@ import org.json.JSONObject;
 @Path("/Transportation")
 @Stateless
 public class RestTransportation {
-
+ String[] parameters={"Basic Toll","Road pricing type","Toll collection technique","Operation Authority"};     
     @GET
     @Path("/{table_name}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -58,8 +58,8 @@ public class RestTransportation {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), res.getInt(1));
                 policy.put(rsmd.getColumnName(2), res.getString(2));
-                for (int i = 3; i < param + 3; i++) {
-                    policy.put(rsmd.getColumnName(i), res.getString(i));
+                for (int i = 0; i < param-1; i++) {
+                    policy.put(parameters[i], res.getString(i+3));
                 }
                 for (int i = param + 2; i < allobj + param + 2; i++) {
                     policy.put(rsmd.getColumnName(i), res.getDouble(i));
@@ -109,8 +109,8 @@ public class RestTransportation {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), res.getInt(1));
                 policy.put(rsmd.getColumnName(2), res.getString(2));
-                for (int i = 3; i < param + 3; i++) {
-                    policy.put(rsmd.getColumnName(i), res.getString(i));
+                for (int i = 0; i < param-1; i++) {
+                    policy.put(parameters[i], res.getString(i+3));
                 }
                 for (int i = param + 2; i < allobj + param + 2; i++) {
                     policy.put(rsmd.getColumnName(i), res.getDouble(i));

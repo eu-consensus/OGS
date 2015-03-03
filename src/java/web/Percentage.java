@@ -48,17 +48,24 @@ public class Percentage {
             ResultSet res = stmt.executeQuery();
             ResultSetMetaData rsmd = res.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
-
-            int allobj = columnsNumber - 3;
+            int param = 0;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+           int allobj = columnsNumber - param - 3;
             JSONArray mylist = new JSONArray();
 
             while (res.next()) {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), res.getInt(1));
-                policy.put(rsmd.getColumnName(2), res.getString(2));
-
-                for (int i = 3; i < allobj + 3; i++) {
-                    policy.put(rsmd.getColumnName(i + 1), res.getDouble(i + 1));
+                policy.put(rsmd.getColumnName(3), res.getString(3));
+                for (int i = 0; i < param ; i++) {
+                    policy.put(rsmd.getColumnName(i + 4), res.getString(i + 4));
+                }
+                for (int i = 0; i < allobj; i++) {
+                    policy.put(rsmd.getColumnName(i + 4 + param), res.getDouble(i + 4 + param));
                 }
 
                 mylist.put(policy);
@@ -86,25 +93,31 @@ public class Percentage {
         try {
             Connection conn = dbUtils.getConnection();
 
-            String query = "SELECT * FROM "+table_name+" WHERE policy=?";
+            String query = "SELECT * FROM " + table_name + " WHERE policy=?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, pol);
             ResultSet res = stmt.executeQuery();
             ResultSetMetaData rsmd = res.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
-
-            int allobj = columnsNumber - 3;
+            int param = 0;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+           int allobj = columnsNumber - param - 3;
             JSONArray mylist = new JSONArray();
 
             while (res.next()) {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), res.getInt(1));
-                policy.put(rsmd.getColumnName(2), res.getString(2));
-
-                for (int i = 3; i < allobj + 3; i++) {
-                    policy.put(rsmd.getColumnName(i + 1), res.getDouble(i + 1));
+                policy.put(rsmd.getColumnName(3), res.getString(3));
+                for (int i = 0; i < param ; i++) {
+                    policy.put(rsmd.getColumnName(i + 4), res.getString(i + 4));
                 }
-
+                for (int i = 0; i < allobj; i++) {
+                    policy.put(rsmd.getColumnName(i + 4 + param), res.getDouble(i + 4 + param));
+                }
                 mylist.put(policy);
             }
             dbUtils.closeConnection(conn);

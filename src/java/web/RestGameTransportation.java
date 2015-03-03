@@ -41,6 +41,8 @@ import org.json.JSONObject;
 @Stateless
 public class RestGameTransportation {
 
+    String[] parameters = {"Basic Toll", "Road pricing type", "Toll collection technique", "Operation Authority"};
+
     @GET
     @Path("/{table_name}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -487,13 +489,13 @@ public class RestGameTransportation {
                 JSONObject policy = new JSONObject();
                 policy.put(rsmd.getColumnName(1), resm.getInt(1));
                 policy.put(rsmd.getColumnName(2), resm.getString(2));
-                for (int i = 3; i < param + 3; i++) {
-                    policy.put(rsmd.getColumnName(i), resm.getString(i));
+                for (int i = 0; i < param - 1; i++) {
+                    policy.put(parameters[i], resm.getString(i + 3));
                 }
                 for (int i = param + 2; i < allobj + param + 2; i++) {
                     policy.put(rsmd.getColumnName(i), resm.getDouble(i));
                 }
-                policy.put("objscore", resm.getInt(allobj +param+ 1));
+                policy.put("objscore", resm.getInt(allobj + param + 1));
                 mylist.put(policy);
             }
             stmt.close();
@@ -512,7 +514,8 @@ public class RestGameTransportation {
         ResponseBuilder builder = Response.ok(result.toString());
         return builder.build();
     }
- @GET
+
+    @GET
     @Path("/orderbypercentage/{table_name1}/{table_name2}/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getbyOrderPercentage(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("id") String id) {
@@ -527,19 +530,30 @@ public class RestGameTransportation {
             ResultSetMetaData rsmd = res.getMetaData();
             int columnsNumber = rsmd.getColumnCount();
             int param = 1;
-
-            int allobj = columnsNumber - 3;
-            String[] objn = new String[allobj];
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+             String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 4);
+            }
+             int allobj = columnsNumber - param - 2;
+             String[] objn = new String[allobj];
             for (int i = 0; i < allobj; i++) {
-                objn[i] = rsmd.getColumnName(4 + i);
+                objn[i] = rsmd.getColumnName(3 + i + param);
             }
             //get obj names to perform the join query
-            String obNames = "";
+             String obNames = "";
             for (int i = 0; i < allobj; i++) {
-                obNames += "" + table_name1 + "." + rsmd.getColumnName(4 + i) + ", ";
+                obNames += "" + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + ", ";
             }
-
-            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + obNames + table_name2 + ".objscore";
+            String parNames = "";
+            for (int i = 1; i < param; i++) {
+                parNames += "" + table_name1 + "." + rsmd.getColumnName(3 + i) + ", ";
+            }
+            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + parNames +obNames + table_name2 + ".objscore";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
                     + " LEFT JOIN " + table_name1
@@ -548,16 +562,19 @@ public class RestGameTransportation {
             PreparedStatement stm = conn.prepareStatement(joinQuery2);
             stm.setString(1, id);
             ResultSet resm = stm.executeQuery();
-
+ResultSetMetaData rsmd2 = resm.getMetaData();
             JSONArray mylist = new JSONArray();
             while (resm.next()) {
-                JSONObject policy = new JSONObject();
-                policy.put(rsmd.getColumnName(1), resm.getInt(1));
-                policy.put(rsmd.getColumnName(3), resm.getString(2));
-                for (int i = 4; i < allobj + 4; i++) {
-                    policy.put(rsmd.getColumnName(i), resm.getDouble(i-1));
+               JSONObject policy = new JSONObject();
+                policy.put(rsmd2.getColumnName(1), resm.getInt(1));
+                policy.put(rsmd2.getColumnName(2), resm.getString(2));
+                for (int i = 0; i < param - 1; i++) {
+                    policy.put(parameters[i], resm.getString(i + 3));
                 }
-                policy.put("objscore", resm.getInt(allobj + 3));
+                for (int i = param + 2; i < allobj + param + 2; i++) {
+                    policy.put(rsmd2.getColumnName(i), resm.getDouble(i));
+                }
+                policy.put("objscore", resm.getInt(allobj + param + 2));
                 mylist.put(policy);
             }
             stmt.close();
