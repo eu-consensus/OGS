@@ -98,7 +98,7 @@ public class Upload extends HttpServlet {
                             wget = wget.replaceAll("/", "");
                         }
                         if (wget.contains(" ")) {
-                            wget =wget.replaceAll(" ", "");
+                            wget = wget.replaceAll(" ", "");
                         }
 
                         pol_names.add(wget);
@@ -121,14 +121,15 @@ public class Upload extends HttpServlet {
                     uc++;
 
                 }
-                objectivecount = uc - COUNT_OF_NAMES - 1;
-                int uobj = 0;
-                double[] objValues = new double[objectivecount];
-                for (double tab : table2) {
-                    objValues[uobj] = tab;
-                    uobj++;
-                }
+
                 if (ur > 3) {
+                    objectivecount = uc - COUNT_OF_NAMES - 1;
+                    int uobj = 0;
+                    double[] objValues = new double[objectivecount];
+                    for (double tab : table2) {
+                        objValues[uobj] = tab;
+                        uobj++;
+                    }
                     ppp.setPolicyParameters(criteria_of_output);
                     ppp.setObjectives(objValues);
                     mypol.add(ppp);
@@ -183,7 +184,7 @@ public class Upload extends HttpServlet {
             }
 
             String query = "INSERT INTO " + tablename + " (" + stpar + ") " + "VALUES(?,?" + addobjp + addobjn + " )";
-           
+
             for (policy pol : mypol) {
                 pwi++;
 
@@ -194,13 +195,14 @@ public class Upload extends HttpServlet {
                     stmt.setString(num + 3, pol.getPolicyParameters()[num]);
                 }
                 for (int num = 0; num < obj_names.length; num++) {
-                    stmt.setDouble(num + COUNT_OF_NAMES + 3, (double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
-                 //   System.out.print((double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
+                    stmt.setDouble(num + COUNT_OF_NAMES + 3, pol.getObjectives()[num]);
+                    //   System.out.print((double) Math.round(pol.getObjectives()[num] * 10000) / 10000);
                 }
 //                System.out.print(query);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
+            System.out.println(e.getMessage());
         }
         dbUtils.closeConnection(conn);
         ServletContext context = getServletContext();

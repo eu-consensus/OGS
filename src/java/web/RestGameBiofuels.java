@@ -682,7 +682,7 @@ public class RestGameBiofuels {
             }
 //            create hash map for each priority
             for (int i = 0; i < allobj; i++) {
-                preference3.put(objn[i], new ArrayList<>());
+                preference3.put(objn[i], new ArrayList<maj>());
             }
             //put values in tables
             for (Join_keep temp : mylist) {
@@ -791,7 +791,7 @@ public class RestGameBiofuels {
                 for (int i = param + 2; i < allobj + param + 2; i++) {
                     policy.put(rsmd.getColumnName(i), resm.getDouble(i));
                 }
-                policy.put("objscore", resm.getInt(allobj + param + 1));
+                policy.put("objscore", resm.getInt(allobj + param + 2));
                 mylist.put(policy);
             }
             stmt.close();

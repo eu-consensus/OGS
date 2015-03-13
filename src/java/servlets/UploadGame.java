@@ -121,15 +121,30 @@ public class UploadGame extends HttpServlet {
 
 //TODO ADD ALL IN pol so i can do math
             Collections.sort(mypol, new polComparator());
-            List<policy> mypol1 = methods.paretoM(mypol, myminmax);
-            List<policy> mypol2 = methods.dominationBYcategory(mypol1, myminmax);
-            Collections.sort(mypol2, new polComparator2());
-            List<policy> mypol3 = methods.nsga2FH(mypol2, myminmax);
-            List<policy> mypol4 = setScore(mypol3);
+            List<policy> mypol12 = null;
+            List<policy>mypol1=null;
+            try {
+                mypol1 = methods.paretoM(mypol, myminmax);
+              
+            } catch (Exception exc) {
+                System.out.println(exc.getMessage());
+            }
+            List<policy> mypol2 = null;
+            List<policy> mypol4 = null;
+            try {
+                mypol2 = methods.dominationBYcategory(mypol1, myminmax);
 
+                Collections.sort(mypol2, new polComparator2());
+                List<policy> mypol3 = methods.nsga2FH(mypol2, myminmax);
+
+                mypol4 = setScore(mypol3);
+            } catch (Exception exc) {
+                System.out.println(exc.getMessage());
+            }
             String mquery = "INSERT INTO " + name + " (ID,P_ID,distance,dominatedbycategory,dominatedbypool,rank,myorder,chosen,liked,objscore,prefscore) " + "VALUES(?,?,?,?,?,?,?,?,?,?,?)";
             PreparedStatement mstmt = conn.prepareStatement(mquery);
             int pwi = 1;
+
             //   System.out.print(mquery);
             for (policy pol : mypol4) {
                 mstmt.setInt(1, pwi);
@@ -146,7 +161,11 @@ public class UploadGame extends HttpServlet {
                 mstmt.executeUpdate();
                 pwi++;
             }
-
+//            mypol.clear();
+//            mypol1.clear();
+//            mypol2.clear();
+//            mypol3.clear();
+//            mypol4.clear();
         } catch (SQLException e) {
             System.out.print(e.getMessage());
         }
@@ -154,7 +173,6 @@ public class UploadGame extends HttpServlet {
         dbUtils.closeConnection(conn);
         ServletContext context = getServletContext();
         RequestDispatcher dispatcher = context.getRequestDispatcher("/dbLoad.jsp");
-
         dispatcher.forward(request, response);
 
     }
@@ -170,7 +188,7 @@ public class UploadGame extends HttpServlet {
         int last_dom = 0;
         int last_score = 0;
         int prev_dom_by = 0;
-        int b=500;
+        int b = 500;
         for (policy pol : mypol) {
             if (pol.getRank() == 1 && pol.getDominated() == 0 && pol.getDominatedbycategory() == 0) {
                 pol.setScore(top_score);
@@ -189,15 +207,15 @@ public class UploadGame extends HttpServlet {
             if (pol.getDominatedbycategory() > prev_dom_by) {
                 last_score -= 20;
             }
-             pol.setScore(last_score);
+            pol.setScore(last_score);
             prev_dom_by = pol.getDominatedbycategory();
         }
-        
-            int bottom=Math.abs(top_score-last_score);
-            int top=0;
+
+        int bottom = Math.abs(top_score - last_score);
+        int top = 0;
         for (policy pol : mypol) {
-            top=Math.abs(pol.getScore()-last_score)*b;
-            pol.setScore(top/bottom);
+            top = Math.abs(pol.getScore() - last_score) * b;
+            pol.setScore(top / bottom);
         }
         return mypol;
     }
