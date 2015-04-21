@@ -31,7 +31,36 @@ import org.json.JSONObject;
 @Stateless
 public class RestBiofuels {
   String[] parameters={"EU biofuel policies","Source of EU biofuel policies","Solid biomass demand EU", "Bioenergy scenario ROW", " LUC regulations","Level of biodiversity protection","Change in food diets","Yield development"};
-        
+     @GET
+    @Path("/help")
+    @Produces(MediaType.APPLICATION_JSON)
+
+    public Response gettables(@Context HttpServletRequest request, @PathParam("table_name") String table_name) {
+        JSONObject result = new JSONObject();
+     
+        try {
+            Connection conn = dbUtils.getConnection();
+            String query = "SHOW TABLES";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet res = stmt.executeQuery();
+            
+            while (res.next()) {
+                 result.put("", res.getString(1));
+            }
+            dbUtils.closeConnection(conn);
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put("result on " + reportDate,result);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (SQLException ex) {
+            Logger.getLogger(RestBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+            
     @GET
     @Path("/{table_name}")
     @Produces(MediaType.APPLICATION_JSON)

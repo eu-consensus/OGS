@@ -101,7 +101,7 @@ public class methods {
 
     }
 
-    public static List<policy> dominationBYcategory(List<policy> theList, boolean[] minmax) {
+    public static List<policy> dominationBYcategory(List<policy> theList,boolean[] minmax) {
         Hashtable<String, List<policy>> myhash = new Hashtable<>();
         List<policy> temp = new ArrayList<>();
         List<policy> gatherList = new ArrayList<>();
@@ -226,9 +226,9 @@ public class methods {
         }
         return minmax;
     }
-
+    
     //find ranges and their % of appearance 
-    public static double[] find_space(List<maj> test, int total) {
+       public static double[] find_space(List<maj> test, int total) {
 
         double[] space = new double[3];
         for (int u = 0; u < space.length; u++) {
@@ -264,8 +264,7 @@ public class methods {
         }
         return space;
     }
-
-    public static List<maj> merge(List<maj> majList) {
+public static List<maj> merge(List<maj> majList) {
         List<maj> merged = new ArrayList<maj>();
         Hashtable<Double, Integer> hashList = new Hashtable<Double, Integer>();
         for (maj temp : majList) {
@@ -311,7 +310,7 @@ public class methods {
         }
         return temp1;
     }
-
+    
     //an oi times einai sunexeis tupou 0.1-0.2-0.3 ktl tote to diastima tha antistoixei sto 20% tou diastimatos 
     //an den einai tote to diastima tha antistoixei sto 20% twn sinolikwn timwn pou emfanizontai :)
     public static class MajComparator implements Comparator<maj> {
@@ -322,11 +321,11 @@ public class methods {
         }
     }
 
+ 
 //Finding pareto frontiers provided the minimization or maximization criteria of each objective O(n^2)
     public static List<policy> paretoM(List<policy> theList, boolean[] minmax) {
 
         for (int i = 0; i < theList.size(); i++) {
-           
             double[] data = theList.get(i).getObjectives();
 
             for (int j = i + 1; j < theList.size(); j++) {
@@ -337,7 +336,6 @@ public class methods {
 
                 for (int w = 0; w < data.length; w++) {
                     if (minmax[w]) {
-
                         int result = maximizationofObjective(data[w], element[w]);
                         if (result == 1) {
                             bigger = true && bigger;
@@ -351,7 +349,6 @@ public class methods {
                             equal = false;
                         }
                     } else {
-
                         int result = minimizationofObjective(data[w], element[w]);
                         if (result == 1) {
                             bigger = true && bigger;
@@ -368,83 +365,14 @@ public class methods {
                 }
                 if (!equal) {
                     if (bigger) {
-//                       
                         theList.get(j).setDominated(theList.get(j).getDominated() + 1);
                       //  theList.get(j).setSi(theList.get(i).getPolicyName());
-                        theList.get(i).setSiR(theList.get(j).getPolicyName());
+                        theList.get(i).setSiR(Integer.toString(theList.get(j).getID()));
                     }
                     if (smaller) {
-//                    
                         theList.get(i).setDominated(theList.get(i).getDominated() + 1);
                       //  theList.get(i).setSi(theList.get(j).getPolicyName());
-                        theList.get(j).setSiR(theList.get(i).getPolicyName());
-                    }
-                }
-            }
-        }
-        return theList;
-    }
-
-      public static List<policy> paretoM2(List<policy> theList, boolean[] minmax) {
-//        int one = 0;
-//        int two = 0;
-//        int three = 0;
-//        int four = 0;
-        for (int i = 0; i < theList.size(); i++) {
-            if (i % 100 == 0) {
-                System.out.println("Eftasa sto : " + i );
-            }
-            double[] data = theList.get(i).getObjectives();
-
-            for (int j = i + 1; j < theList.size(); j++) {
-                double[] element = theList.get(j).getObjectives();
-                boolean bigger = true;
-                boolean smaller = true;
-                boolean equal = true;
-
-                for (int w = 0; w < data.length; w++) {
-                    if (minmax[w]) {
-//                        one++;
-                        int result = maximizationofObjective(data[w], element[w]);
-                        if (result == 1) {
-                            bigger = true && bigger;
-                            smaller = false;
-                            equal = false;
-                        } else if (result == 0) {
-                            equal = true && equal;
-                        } else {
-                            bigger = false;
-                            smaller = true && smaller;
-                            equal = false;
-                        }
-                    } else {
-//                        two++;
-                        int result = minimizationofObjective(data[w], element[w]);
-                        if (result == 1) {
-                            bigger = true && bigger;
-                            smaller = false;
-                            equal = false;
-                        } else if (result == 0) {
-                            equal = true && equal;
-                        } else {
-                            bigger = false;
-                            smaller = true && smaller;
-                            equal = false;
-                        }
-                    }
-                }
-                if (!equal) {
-                    if (bigger) {
-//                        three++;
-                        theList.get(j).setDominated(theList.get(j).getDominated() + 1);
-                     //   theList.get(j).setSi(theList.get(i).getPolicyName());
-                        theList.get(i).setSiR(theList.get(j).getPolicyName());
-                    }
-                    if (smaller) {
-//                        four++;
-                        theList.get(i).setDominated(theList.get(i).getDominated() + 1);
-                      //  theList.get(i).setSi(theList.get(j).getPolicyName());
-                        theList.get(j).setSiR(theList.get(i).getPolicyName());
+                        theList.get(j).setSiR(Integer.toString(theList.get(i).getID()));
                     }
                 }
             }
@@ -618,7 +546,7 @@ public class methods {
             policy pol = new policy(number, number2);
             pol = iterator.next();
             pol.setNi(pol.getDominated());
-            String keyName = pol.getPolicyName();
+            String keyName = Integer.toString(pol.getID());
             myList.put(keyName, pol);
         }
 
@@ -670,7 +598,6 @@ public class methods {
             }
         }
         retList = paretoM(theList, minmax);
-       
         return retList;
     }
 

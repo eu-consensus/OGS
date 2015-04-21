@@ -118,33 +118,21 @@ public class UploadGame extends HttpServlet {
                 pol.setOrder(allobj, optimalValues, worseValues);
                 mypol.add(pol);
             }
-
+System.out.println("added policies in list");
 //TODO ADD ALL IN pol so i can do math
             Collections.sort(mypol, new polComparator());
-            List<policy> mypol12 = null;
-            List<policy>mypol1=null;
-            try {
-                mypol1 = methods.paretoM(mypol, myminmax);
-              
-            } catch (Exception exc) {
-                System.out.println(exc.getMessage());
-            }
-            List<policy> mypol2 = null;
-            List<policy> mypol4 = null;
-            try {
-                mypol2 = methods.dominationBYcategory(mypol1, myminmax);
-
-                Collections.sort(mypol2, new polComparator2());
-                List<policy> mypol3 = methods.nsga2FH(mypol2, myminmax);
-
-                mypol4 = setScore(mypol3);
-            } catch (Exception exc) {
-                System.out.println(exc.getMessage());
-            }
+            List<policy> mypol1 = methods.paretoM(mypol, myminmax);
+            System.out.println("finished pareto M");
+            List<policy> mypol2 = methods.dominationBYcategory(mypol1, myminmax);
+            System.out.println("finished dominationby category");
+            Collections.sort(mypol2, new polComparator2());
+            List<policy> mypol3 = methods.nsga2FH(mypol2, myminmax);
+            System.out.println("finished nsga2FH");
+            List<policy> mypol4 = setScore(mypol3);
+            System.out.println("added Scores");
             String mquery = "INSERT INTO " + name + " (ID,P_ID,distance,dominatedbycategory,dominatedbypool,rank,myorder,chosen,liked,objscore,prefscore) " + "VALUES(?,?,?,?,?,?,?,?,?,?,?)";
             PreparedStatement mstmt = conn.prepareStatement(mquery);
             int pwi = 1;
-
             //   System.out.print(mquery);
             for (policy pol : mypol4) {
                 mstmt.setInt(1, pwi);
@@ -161,11 +149,9 @@ public class UploadGame extends HttpServlet {
                 mstmt.executeUpdate();
                 pwi++;
             }
-//            mypol.clear();
-//            mypol1.clear();
-//            mypol2.clear();
-//            mypol3.clear();
-//            mypol4.clear();
+          
+           
+
         } catch (SQLException e) {
             System.out.print(e.getMessage());
         }
@@ -173,6 +159,7 @@ public class UploadGame extends HttpServlet {
         dbUtils.closeConnection(conn);
         ServletContext context = getServletContext();
         RequestDispatcher dispatcher = context.getRequestDispatcher("/dbLoad.jsp");
+
         dispatcher.forward(request, response);
 
     }

@@ -173,7 +173,7 @@ public class RestGameTransportation {
             String select = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
             String joinQuery = "SELECT " + select
                     + " FROM " + table_name2
-                    + " LEFT JOIN " + table_name1
+                    + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
                     + " ORDER BY " + table_name2 + ".ID";
             PreparedStatement stmtj = conn.prepareStatement(joinQuery);
@@ -274,7 +274,7 @@ public class RestGameTransportation {
             String select = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
             String joinQuery = "SELECT " + select
                     + " FROM " + table_name2
-                    + " LEFT JOIN " + table_name1
+                    + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
                     + " ORDER BY " + table_name2 + ".ID";
             PreparedStatement stmtj = conn.prepareStatement(joinQuery);
@@ -374,7 +374,7 @@ public class RestGameTransportation {
             String select = "" + table_name1 + ".policy," + obNames + table_name2 + ".myorder, " + table_name2 + ".chosen";
             String joinQuery = "SELECT " + select
                     + " FROM " + table_name2
-                    + " LEFT JOIN " + table_name1
+                    + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
                     + " ORDER BY " + table_name2 + ".ID";
             PreparedStatement stmtj = conn.prepareStatement(joinQuery);
@@ -399,7 +399,7 @@ public class RestGameTransportation {
             HashMap<String, List<maj>> preferenceOrder = new HashMap<>();
 //            create hash map for each priority
             for (int i = 0; i < allobj; i++) {
-                preferenceOrder.put(objn[i], new ArrayList<>());
+                preferenceOrder.put(objn[i], new ArrayList<maj>());
             }
             //put values in tables
             for (Join_keep temp : mylist) {
@@ -477,7 +477,7 @@ public class RestGameTransportation {
             String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + parNames + obNames + table_name2 + ".objscore";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
-                    + " LEFT JOIN " + table_name1
+                    + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID"
                     + " WHERE " + table_name2 + ".myorder=?";
             PreparedStatement stm = conn.prepareStatement(joinQuery2);
@@ -556,7 +556,7 @@ public class RestGameTransportation {
             String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + parNames +obNames + table_name2 + ".objscore";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
-                    + " LEFT JOIN " + table_name1
+                    + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
                     + " WHERE " + table_name2 + ".myorder=?";
             PreparedStatement stm = conn.prepareStatement(joinQuery2);

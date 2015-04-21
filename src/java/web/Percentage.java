@@ -33,7 +33,8 @@ import org.json.JSONObject;
 @Path("/Percentage")
 @Stateless
 public class Percentage {
-
+String[] parameters={"EU biofuel policies","Source of EU biofuel policies","Solid biomass demand EU", "Bioenergy scenario ROW", " LUC regulations","Level of biodiversity protection","Change in food diets","Yield development"};
+    
     @GET
     @Path("/{table_name}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -62,7 +63,7 @@ public class Percentage {
                 policy.put(rsmd.getColumnName(1), res.getInt(1));
                 policy.put(rsmd.getColumnName(3), res.getString(3));
                 for (int i = 0; i < param ; i++) {
-                    policy.put(rsmd.getColumnName(i + 4), res.getString(i + 4));
+                    policy.put(parameters[i], res.getString(i + 4));
                 }
                 for (int i = 0; i < allobj; i++) {
                     policy.put(rsmd.getColumnName(i + 4 + param), res.getDouble(i + 4 + param));
