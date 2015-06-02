@@ -601,4 +601,57 @@ public static List<maj> merge(List<maj> majList) {
         return retList;
     }
 
+      public static List<policy> paretoG(List<policy> theList, boolean[] minmax) {
+
+        for (int i = 0; i < theList.size(); i++) {
+            double[] data = theList.get(i).getObjectives();
+
+            for (int j = i + 1; j < theList.size(); j++) {
+                double[] element = theList.get(j).getObjectives();
+                boolean bigger = true;
+                boolean smaller = true;
+                boolean equal = true;
+
+                for (int w = 0; w < data.length; w++) {
+                    if (minmax[w]) {
+                        int result = maximizationofObjective(data[w], element[w]);
+                        if (result == 1) {
+                            bigger = true && bigger;
+                            smaller = false;
+                            equal = false;
+                        } else if (result == 0) {
+                            equal = true && equal;
+                        } else {
+                            bigger = false;
+                            smaller = true && smaller;
+                            equal = false;
+                        }
+                    } else {
+                        int result = minimizationofObjective(data[w], element[w]);
+                        if (result == 1) {
+                            bigger = true && bigger;
+                            smaller = false;
+                            equal = false;
+                        } else if (result == 0) {
+                            equal = true && equal;
+                        } else {
+                            bigger = false;
+                            smaller = true && smaller;
+                            equal = false;
+                        }
+                    }
+                }
+                if (!equal) {
+                    if (bigger) {
+                        theList.get(j).setDominatedbycategory(theList.get(j).getDominatedbycategory() + 1);
+                    }
+                    if (smaller) {
+                        theList.get(i).setDominatedbycategory(theList.get(i).getDominatedbycategory()+ 1);
+                    }
+                }
+            }
+        }
+        return theList;
+    }
+
 }

@@ -12,8 +12,10 @@ package methods;
  */
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -22,6 +24,8 @@ import java.util.UUID;
  */
 public class policy {
 
+    private Hashtable<String, String> myhash = new Hashtable<>();
+    private static int counter = 0;
     private String policyName;
     private double[] objectives;
     private String[] policyParameters;
@@ -170,6 +174,20 @@ public class policy {
         return order;
     }
 
+    public void setOrder2(String[] params) {     
+        String prm = "";
+        for (int i = 0; i < params.length; i++) {
+            prm += params[i];
+        }
+        if (myhash.containsKey(prm)) {
+           this.order= myhash.get(prm);
+        }else{
+            counter++;
+            myhash.put(prm,Integer.toString(counter));
+            this.order=Integer.toString(counter);
+        }
+    }
+
     public void setOrder(int objectives_number, double[] optimalValue, double[] worseValue) {
         //in order to create the right order we need to substract from the total number of objectives
         Hashtable<String, List<Integer>> thisorder = new Hashtable<>();
@@ -206,12 +224,12 @@ public class policy {
         for (int u = thisorder.size() - 1; u >= 0; u--) {
             if (thisorder.get(Integer.toString(u)).size() > 1) {
                 if (u != thisorder.size() - 1) {//if not first element
-                    if (thisorder.get(Integer.toString(u + 1)).equals(thisorder.get(Integer.toString(u)))&& dble) {//if the next priority list is the same give the same priority
+                    if (thisorder.get(Integer.toString(u + 1)).equals(thisorder.get(Integer.toString(u))) && dble) {//if the next priority list is the same give the same priority
                         for (int temp : thisorder.get(Integer.toString(u))) {
                             fthisorder1[temp] = i;
                         }
                     } else {//if the next priority list is NOT the same give for 3 elements +3
-                        if(dble){
+                        if (dble) {
                             i += thisorder.get(Integer.toString(u + 1)).size();
                         }
                         for (int temp : thisorder.get(Integer.toString(u))) {
@@ -247,4 +265,5 @@ public class policy {
         this.order = myorder;
     }
 
+ 
 }

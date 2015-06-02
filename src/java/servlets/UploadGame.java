@@ -109,7 +109,11 @@ public class UploadGame extends HttpServlet {
                 pol.setID(res.getInt(1));
                 pol.setPolicyName(res.getString(2));
                 double[] obj_values = new double[allobj];
-
+                
+                String[] objp = new String[param - 1];
+                for (int i = 0; i < param - 1; i++) {
+                    objp[i] = res.getString(i + 3);
+                }
                 for (int i = 0; i < allobj; i++) {
                     obj_values[i] = res.getDouble(beforeobj + i);
                 }
@@ -118,7 +122,7 @@ public class UploadGame extends HttpServlet {
                 pol.setOrder(allobj, optimalValues, worseValues);
                 mypol.add(pol);
             }
-System.out.println("added policies in list");
+            System.out.println("added policies in list");
 //TODO ADD ALL IN pol so i can do math
             Collections.sort(mypol, new polComparator());
             List<policy> mypol1 = methods.paretoM(mypol, myminmax);
@@ -149,8 +153,6 @@ System.out.println("added policies in list");
                 mstmt.executeUpdate();
                 pwi++;
             }
-          
-           
 
         } catch (SQLException e) {
             System.out.print(e.getMessage());

@@ -131,7 +131,7 @@ public class UploadERF extends HttpServlet {
                     objValues[uobj] = tab;
                     uobj++;
                 }
-                ppp.setPolicyName(criteria_of_output[1]+"_"+criteria_of_output[2]+"_"+criteria_of_output[3]+"_"+criteria_of_output[0]+" euro");
+                ppp.setPolicyName(criteria_of_output[1]+" "+criteria_of_output[2]+" "+criteria_of_output[3]+" "+criteria_of_output[0]+" euro");
                 if (ur > 0) {
                     ppp.setPolicyParameters(criteria_of_output);
                     ppp.setObjectives(objValues);

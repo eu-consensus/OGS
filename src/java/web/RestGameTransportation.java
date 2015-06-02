@@ -12,6 +12,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -23,6 +24,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -535,17 +537,17 @@ public class RestGameTransportation {
                     param++;
                 }
             }
-             String[] objp = new String[param - 1];
+            String[] objp = new String[param - 1];
             for (int i = 0; i < param - 1; i++) {
                 objp[i] = rsmd.getColumnName(i + 4);
             }
-             int allobj = columnsNumber - param - 2;
-             String[] objn = new String[allobj];
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
             for (int i = 0; i < allobj; i++) {
                 objn[i] = rsmd.getColumnName(3 + i + param);
             }
             //get obj names to perform the join query
-             String obNames = "";
+            String obNames = "";
             for (int i = 0; i < allobj; i++) {
                 obNames += "" + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + ", ";
             }
@@ -553,7 +555,7 @@ public class RestGameTransportation {
             for (int i = 1; i < param; i++) {
                 parNames += "" + table_name1 + "." + rsmd.getColumnName(3 + i) + ", ";
             }
-            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + parNames +obNames + table_name2 + ".objscore";
+            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy," + parNames + obNames + table_name2 + ".objscore";
             String joinQuery2 = "SELECT " + select2
                     + " FROM " + table_name2
                     + " INNER JOIN " + table_name1
@@ -562,10 +564,10 @@ public class RestGameTransportation {
             PreparedStatement stm = conn.prepareStatement(joinQuery2);
             stm.setString(1, id);
             ResultSet resm = stm.executeQuery();
-ResultSetMetaData rsmd2 = resm.getMetaData();
+            ResultSetMetaData rsmd2 = resm.getMetaData();
             JSONArray mylist = new JSONArray();
             while (resm.next()) {
-               JSONObject policy = new JSONObject();
+                JSONObject policy = new JSONObject();
                 policy.put(rsmd2.getColumnName(1), resm.getInt(1));
                 policy.put(rsmd2.getColumnName(2), resm.getString(2));
                 for (int i = 0; i < param - 1; i++) {
@@ -583,7 +585,7 @@ ResultSetMetaData rsmd2 = resm.getMetaData();
             DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
             Date today = Calendar.getInstance().getTime();
             String reportDate = df.format(today);
-            result.put("result on " + reportDate, mylist);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
         } catch (SQLException ex) {
             System.out.print(ex.getMessage());
         } catch (JSONException ex) {
@@ -592,6 +594,237 @@ ResultSetMetaData rsmd2 = resm.getMetaData();
 
         ResponseBuilder builder = Response.ok(result.toString());
         return builder.build();
+    }
+
+      @GET
+    @Path("/orderbypercentage2/{table_name1}/{table_name2}/{order}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getbyOrderPercentage2(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("order") String order) {
+
+        Connection conn = dbUtils.getConnection();
+        List<Integer> first = new ArrayList<>();
+        List<Integer> second = new ArrayList<>();
+        List<Integer> third = new ArrayList<>();
+        List<Integer> fourth = new ArrayList<>();
+        List<Integer> firstc = new ArrayList<>();
+        List<Integer> secondc = new ArrayList<>();
+        List<Integer> thirdc = new ArrayList<>();
+        List<Integer> fourthc = new ArrayList<>();
+        JSONArray mylist = new JSONArray();
+        char[] pref = new char[6];
+        pref = order.toCharArray();
+        //find 1s 2s 3s 4s
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '1') {
+                first.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '2') {
+                second.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '3') {
+                third.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '4') {
+                fourth.add(i);
+            }
+        }
+
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 4);
+            }
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(3 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
+            }
+            String parNames = "";
+            for (int i = 1; i < param; i++) {
+                parNames += "," + table_name1 + "." + rsmd.getColumnName(3 + i) + " ";
+            }
+
+            String whole = "SELECT " + table_name1 + ".ID " + obNames + " FROM " + table_name1 + " WHERE ";
+            for (int i = 0; i < first.size(); i++) {
+                whole += "" + objn[first.get(i)] + " BETWEEN 90 AND 100";
+                if (first.size() - i > 1) {
+                    whole += " AND ";
+                }
+            }
+            System.out.println(whole);
+            PreparedStatement stmf = conn.prepareStatement(whole);
+            ResultSet resmf = stmf.executeQuery();
+            while (resmf.next()) {
+                firstc.add(resmf.getInt(1));
+            }
+            if (firstc.size()< 3) {
+                mylist = ret(conn, firstc, table_name1, table_name2, parNames, obNames, param, allobj);
+            } else {
+                resmf.beforeFirst();
+                while (resmf.next()) {
+                    double min = resmf.getDouble(first.get(0) + 2);
+                    for (int temp1 : first) {
+                        if (min > resmf.getDouble(temp1 + 2)) {
+                            min = resmf.getDouble(temp1 + 2);
+                        }
+                    }
+                    if (!second.isEmpty()) {
+                        boolean issmaller = true;
+                        double min2 = resmf.getDouble(second.get(0) + 2);
+                        for (int temp2 : second) {
+                            if (min2 > resmf.getDouble(temp2 + 2)) {
+                                min2 = resmf.getDouble(temp2 + 2);
+                            }
+                            if (resmf.getDouble(temp2 + 2) < min) {
+                                issmaller = issmaller & true;
+                            } else {
+                                issmaller = issmaller & false;
+                            }
+                        }
+                        if (issmaller) {
+                            secondc.add(resmf.getInt(1));
+                        
+                        if (!third.isEmpty()) {
+                          
+
+                           double min3 = resmf.getDouble(third.get(0) + 2);
+                            for (int temp3 : third) {
+                                if (min3 > resmf.getDouble(temp3 + 2)) {
+                                    min3 = resmf.getDouble(temp3 + 2);
+                                }
+                                if (resmf.getDouble(temp3 + 2) < min2) {
+                                    issmaller = issmaller & true;
+                                } else {
+                                    issmaller = issmaller & false;
+                                }
+                            }
+                            if (issmaller) {
+                                thirdc.add(resmf.getInt(1));
+                            
+                            if (!fourth.isEmpty()) {
+                             
+                                double min4 = resmf.getDouble(fourth.get(0) + 2);
+                                for (int temp4 : fourth) {
+                                    if (min4 > resmf.getDouble(temp4 + 2)) {
+                                        min4 = resmf.getDouble(temp4 + 2);
+                                    }
+                                    if (resmf.getDouble(temp4 + 2) < min3) {
+                                        issmaller = issmaller & true;
+                                    } else {
+                                        issmaller = issmaller & false;
+                                    }
+                                }
+                                if (issmaller) {
+                                    fourthc.add(resmf.getInt(1));
+                                }
+                            }
+                            }
+                        }
+                        }
+                    }
+                }
+                if (fourthc.size() > 2) {
+                    mylist = ret(conn, fourthc, table_name1, table_name2, parNames, obNames, param, allobj);
+                } else if (thirdc.size() > 2) {
+                    mylist = ret(conn, thirdc, table_name1, table_name2, parNames, obNames, param, allobj);
+                } else if (secondc.size() > 2) {
+                    mylist = ret(conn, secondc, table_name1, table_name2, parNames, obNames, param, allobj);
+                } else {
+                    mylist = ret(conn, firstc, table_name1, table_name2, parNames, obNames, param, allobj);
+                }
+            }
+            stmt.close();
+            conn.close();
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    private JSONArray ret(Connection conn, List<Integer> idList, String table_name1, String table_name2, String parNames, String obNames, int param, int allobj) throws JSONException {
+
+        JSONArray mylist = new JSONArray();
+        try {
+            for (int id : idList) {
+
+                String joinQuery2 = "SELECT " + table_name2 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".objscore"
+                        + " FROM " + table_name2
+                        + " INNER JOIN " + table_name1
+                        + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                        + " WHERE " + table_name1 + ".ID=?";
+//               System.out.println(joinQuery2);
+                PreparedStatement stm = conn.prepareStatement(joinQuery2);
+                stm.setInt(1, id);
+                ResultSet resm = stm.executeQuery();
+                ResultSetMetaData rsmd2 = resm.getMetaData();
+
+                while (resm.next()) {
+                    JSONObject policy = new JSONObject();
+                    policy.put(rsmd2.getColumnName(1), resm.getInt(1));
+                    policy.put(rsmd2.getColumnName(2), resm.getString(2));
+                    for (int i = 0; i < param - 1; i++) {
+                        policy.put(parameters[i], resm.getString(i + 3));
+                    }
+                    for (int i = param + 2; i < allobj + param + 2; i++) {
+                        policy.put(rsmd2.getColumnName(i), resm.getDouble(i));
+                    }
+                    policy.put("objscore", resm.getInt(allobj + param + 2));
+                    mylist.put(policy);
+                }
+                stm.close();
+            }
+
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        }
+        return mylist;
+    }
+
+    private double min(List<Double> tominimize) {
+        double temp;
+        if (tominimize.size() < 2) {
+            return tominimize.get(0);
+        } else {
+            temp = tominimize.get(0);
+            for (double it : tominimize) {
+                if (it < temp) {
+                    temp = it;
+                }
+            }
+            return temp;
+        }
     }
 
     @GET
@@ -709,4 +942,109 @@ ResultSetMetaData rsmd2 = resm.getMetaData();
         ResponseBuilder builder = Response.ok(result.toString());
         return builder.build();
     }
+          @GET
+    @Path("/orderbypercentage3/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+    //TODO change in String Array ?ids=24041&ids=24117
+    public Response getbyOrderPercentage3(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("par") List<String> crit) {
+
+        Connection conn = dbUtils.getConnection();
+        JSONArray mylist = new JSONArray();
+
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            //objective parameters -criteria 
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 4);
+            }
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(3 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
+            }
+            String parNames = "";
+            for (int i = 1; i < param; i++) {
+                parNames += "," + table_name1 + "." + rsmd.getColumnName(3 + i) + " ";
+            }
+
+            String select2 = "" + table_name2 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".objscore ," + table_name2 + ".dominatedbycategory ," + table_name2 + ".dominatedbypool ";
+            String sentence1 = "";
+            Iterator<String> myit = crit.iterator();
+            for (int i = 0; i < objp.length; i++) {
+                if (myit.hasNext()) {
+                    String cr = myit.next();
+                    if (!cr.equals("NULL")) {
+                        sentence1 += "" + table_name1 + "." + objp[i] + "='" + cr + "'";
+                        if ((i < objp.length - 1)) {
+                             if (!crit.get(i + 1).equals("NULL")){
+                            sentence1 += " AND ";
+                             }
+                        }
+                    }else{
+                        if (!crit.get(i + 1).equals("NULL") & !sentence1.isEmpty()) {sentence1+=" AND ";}
+                    }
+                }
+            }
+
+            String joinQuery2 = "SELECT " + select2
+                    + " FROM " + table_name2
+                    + " INNER JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                    + " WHERE " + sentence1;
+            System.out.println(joinQuery2);
+            PreparedStatement stm = conn.prepareStatement(joinQuery2);
+            ResultSet resm = stm.executeQuery();
+            ResultSetMetaData rsmd2 = resm.getMetaData();
+
+            while (resm.next()) {
+                JSONObject policy = new JSONObject();
+                policy.put(rsmd2.getColumnName(1), resm.getInt(1));
+                policy.put(rsmd2.getColumnName(2), resm.getString(2));
+                for (int i = 0; i < param - 1; i++) {
+                    policy.put(parameters[i], resm.getString(i + 3));
+                }
+                for (int i = param + 2; i < allobj + param + 2; i++) {
+                    policy.put(rsmd2.getColumnName(i), resm.getDouble(i));
+                }
+                policy.put("objscore", resm.getInt(allobj + param + 2));
+                policy.put("dominatedbycategory", resm.getInt(allobj + param + 3));
+                policy.put("dominatedbypool", resm.getInt(allobj + param + 4));
+                mylist.put(policy);
+            }
+
+            stmt.close();
+            conn.close();
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+
+        return builder.build();
+    }
+
 }
