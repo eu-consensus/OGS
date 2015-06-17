@@ -187,7 +187,9 @@ public class policy {
             this.order=Integer.toString(counter);
         }
     }
-
+public void setOrder(String order){
+    this.order=order;
+}
     public void setOrder(int objectives_number, double[] optimalValue, double[] worseValue) {
         //in order to create the right order we need to substract from the total number of objectives
         Hashtable<String, List<Integer>> thisorder = new Hashtable<>();
