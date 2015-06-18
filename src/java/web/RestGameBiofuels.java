@@ -1454,7 +1454,6 @@ public class RestGameBiofuels {
     //TODO check h
     public Response getOptimalbyPriority(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("priority") String priority) {
 
-        Connection conn = dbUtils.getConnection();
         List<Integer> first = new ArrayList<>();
         List<Integer> second = new ArrayList<>();
         List<Integer> third = new ArrayList<>();
@@ -1492,6 +1491,7 @@ public class RestGameBiofuels {
         JSONObject result = new JSONObject();
         try {
 
+            Connection conn = dbUtils.getConnection();
             PreparedStatement stmt = conn.prepareStatement(query1);
             ResultSet res = stmt.executeQuery();
             ResultSetMetaData rsmd = res.getMetaData();
@@ -1768,7 +1768,7 @@ public class RestGameBiofuels {
     //there i check for optimallity within its own category in this mixed category return boolean true and score from this category if inside otherwise return boolean false and closeness score 
     public Response getScorebyID(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("prior") String priority, @QueryParam("id") int id) {
         {
-
+//get achievement_table ID from percentage3
             Connection conn = dbUtils.getConnection();
             List<Integer> first = new ArrayList<>();
             List<Integer> second = new ArrayList<>();
@@ -1970,8 +1970,8 @@ public class RestGameBiofuels {
                 DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
                 Date today = Calendar.getInstance().getTime();
                 String reportDate = df.format(today);
-                result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
                 result.put("belongs", Boolean.toString(belongs));
+                result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
             } catch (SQLException ex) {
                 System.out.print(ex.getMessage());
             } catch (JSONException ex) {
@@ -2311,7 +2311,7 @@ public class RestGameBiofuels {
                 obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
             }
 
-            String joinQuery2 = "SELECT " + table_name1 + ".ID" + obNames + "," + table_name2 + ".myorder "
+            String joinQuery2 = "SELECT " + table_name1 + ".ID" + obNames
                     + " FROM " + table_name2
                     + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID";
@@ -2362,14 +2362,15 @@ public class RestGameBiofuels {
                     }
                 }
                 pol.setObjectives(obj_values);
-                pol.setOrder(resm.getString(allobj + 2));
                 mypol.add(pol);
             }
             DBScan myCluster = new DBScan(mypol, eps, allobj, minPts);
             myCluster.getClusters();
             Map<Integer, List<Integer>> clusterList = myCluster.cluster;
             Iterator it = clusterList.entrySet().iterator();
-            String qq = "SELECT myorder FROM " + table_name2 + " WHERE ID=?";
+            String qq = "SELECT " + table_name2 + ".myorder FROM " + table_name2
+                    + " INNER JOIN " + table_name1 + " ON " + table_name2 + ".P_ID= " + table_name1 + ".ID  WHERE "
+                    + table_name1 + ".ID=?";
             int counter = 0;
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry) it.next();
@@ -2393,8 +2394,8 @@ public class RestGameBiofuels {
                 }
                 mylist.put("cluster " + Integer.toString(counter), item);
                 counter++;
-            
-            stm.close();
+
+                stm.close();
             }
             DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
             Date today = Calendar.getInstance().getTime();
@@ -2409,6 +2410,616 @@ public class RestGameBiofuels {
         }
 
         ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/percentageCluster/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getpercentageCluster(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("eps") double eps, @QueryParam("minPts") int minPts) {
+
+        String query1 = "SELECT * FROM " + table_name1;
+        boolean[] myminmax = {false, false, false, true};
+        double[] best, worse;
+        JSONObject result = new JSONObject();
+        JSONObject mylist = new JSONObject();
+        List<policy> mypol = new ArrayList<>();
+        try {
+            Connection conn = dbUtils.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 4);
+            }
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(3 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
+            }
+//take Id of main table eg.World_2030 -which is the same as achievement_World_2030 aka table_name1.ID
+            String joinQuery2 = "SELECT " + table_name1 + ".ID" + obNames
+                    + " FROM " + table_name2
+                    + " INNER JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID";
+            System.out.println(joinQuery2);
+            PreparedStatement st = conn.prepareStatement(joinQuery2);
+            ResultSet resm = st.executeQuery();
+
+            resm.beforeFirst();
+            while (resm.next()) {
+                policy pol = new policy(objn.length, 0);
+                pol.setID(resm.getInt(1));
+                double[] obj_values = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+                    obj_values[i] = resm.getDouble(2 + i);
+                }
+                pol.setObjectives(obj_values);
+                mypol.add(pol);
+            }
+            DBScan myCluster = new DBScan(mypol, eps, allobj, minPts);
+            myCluster.getClusters();
+            Map<Integer, List<Integer>> clusterList = myCluster.cluster;
+            Iterator it = clusterList.entrySet().iterator();
+            String qq = "SELECT " + table_name2 + ".myorder FROM " + table_name2
+                    + " INNER JOIN " + table_name1 + " ON " + table_name2 + ".P_ID= " + table_name1 + ".P_ID  WHERE "
+                    + table_name1 + ".ID=?";
+            int counter = 0;
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                List<Integer> ml = (List<Integer>) pair.getValue();
+                int key = (int) pair.getKey();
+                JSONObject item = new JSONObject();
+                for (int i : ml) {
+
+                    PreparedStatement stm = conn.prepareStatement(qq);
+                    stm.setInt(1, i);
+                    ResultSet resmq = stm.executeQuery();
+                    while (resmq.next()) {
+                        item.put(Integer.toString(i), resmq.getString(1));
+                    }
+                }
+                PreparedStatement stm = conn.prepareStatement(qq);
+                stm.setInt(1, key);
+                ResultSet resmq = stm.executeQuery();
+                while (resmq.next()) {
+                    item.put(Integer.toString(key), resmq.getString(1));
+                }
+                mylist.put("cluster " + Integer.toString(counter), item);
+                counter++;
+
+                stm.close();
+            }
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+            stmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/prioritizationToCluster/{table_name1}/{table_name2}/{prior}")
+    @Produces(MediaType.APPLICATION_JSON)
+    //works with achievement_table as table_name1 and game table as table_name2
+    public Response prioritizationToCluster(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("prior") String prior, @QueryParam("eps") double eps, @QueryParam("minPts") int minPts) throws JSONException {
+        JSONObject mylist = new JSONObject();
+        List<policy> mypol = new ArrayList<>();
+        List<policy> mypol2 = new ArrayList<>();
+        List<Integer> first = new ArrayList<>();
+        List<Integer> second = new ArrayList<>();
+        List<Integer> third = new ArrayList<>();
+        List<Integer> fourth = new ArrayList<>();
+        List<Integer> firstc = new ArrayList<>();
+        List<Integer> secondc = new ArrayList<>();
+        List<Integer> thirdc = new ArrayList<>();
+        List<Integer> fourthc = new ArrayList<>();
+
+        char[] pref = new char[6];
+        pref = prior.toCharArray();
+        //find 1s 2s 3s 4s
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '1') {
+                first.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '2') {
+                second.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '3') {
+                third.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '4') {
+                fourth.add(i);
+            }
+        }
+
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+
+            Connection conn = dbUtils.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 4);
+            }
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(3 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
+            }
+            String parNames = "";
+            for (int i = 1; i < param; i++) {
+                parNames += "," + table_name1 + "." + rsmd.getColumnName(3 + i) + " ";
+            }
+
+            String whole = "SELECT " + table_name1 + ".ID " + obNames + " FROM " + table_name1 + " WHERE ";
+            for (int i = 0; i < first.size(); i++) {
+                whole += "" + objn[first.get(i)] + " BETWEEN 85 AND 100";
+                if (first.size() - i > 1) {
+                    whole += " AND ";
+                }
+            }
+            System.out.println(whole);
+            PreparedStatement stmf = conn.prepareStatement(whole);
+            ResultSet resmf = stmf.executeQuery();
+            while (resmf.next()) {
+                firstc.add(resmf.getInt(1));
+            }
+            if (firstc.size() < 3) {
+                mypol2 = retpol(conn, firstc, table_name1, table_name2, obNames);
+            } else {
+                resmf.beforeFirst();
+                while (resmf.next()) {
+                    double min = resmf.getDouble(first.get(0) + 2);
+                    for (int temp1 : first) {
+                        if (min > resmf.getDouble(temp1 + 2)) {
+                            min = resmf.getDouble(temp1 + 2);
+                        }
+                    }
+                    if (!second.isEmpty()) {
+                        boolean issmaller = true;
+                        double min2 = resmf.getDouble(second.get(0) + 2);
+                        for (int temp2 : second) {
+                            if (min2 > resmf.getDouble(temp2 + 2)) {
+                                min2 = resmf.getDouble(temp2 + 2);
+                            }
+                            if (resmf.getDouble(temp2 + 2) < min) {
+                                issmaller = issmaller & true;
+                            } else {
+                                issmaller = issmaller & false;
+                            }
+                        }
+                        if (issmaller) {
+                            secondc.add(resmf.getInt(1));
+
+                            if (!third.isEmpty()) {
+
+                                double min3 = resmf.getDouble(third.get(0) + 2);
+                                for (int temp3 : third) {
+                                    if (min3 > resmf.getDouble(temp3 + 2)) {
+                                        min3 = resmf.getDouble(temp3 + 2);
+                                    }
+                                    if (resmf.getDouble(temp3 + 2) < min2) {
+                                        issmaller = issmaller & true;
+                                    } else {
+                                        issmaller = issmaller & false;
+                                    }
+                                }
+                                if (issmaller) {
+                                    thirdc.add(resmf.getInt(1));
+
+                                    if (!fourth.isEmpty()) {
+
+                                        double min4 = resmf.getDouble(fourth.get(0) + 2);
+                                        for (int temp4 : fourth) {
+                                            if (min4 > resmf.getDouble(temp4 + 2)) {
+                                                min4 = resmf.getDouble(temp4 + 2);
+                                            }
+                                            if (resmf.getDouble(temp4 + 2) < min3) {
+                                                issmaller = issmaller & true;
+                                            } else {
+                                                issmaller = issmaller & false;
+                                            }
+                                        }
+                                        if (issmaller) {
+                                            fourthc.add(resmf.getInt(1));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (fourthc.size() > 2) {
+                    mypol2 = retpol(conn, fourthc, table_name1, table_name2, obNames);
+                } else if (thirdc.size() > 2) {
+                    mypol2 = retpol(conn, thirdc, table_name1, table_name2, obNames);
+                } else if (secondc.size() > 2) {
+                    mypol2 = retpol(conn, secondc, table_name1, table_name2, obNames);
+                } else {
+                    mypol2 = retpol(conn, firstc, table_name1, table_name2, obNames);
+                }
+            }
+            stmt.close();
+            conn.close();
+            DBScan myCluster = new DBScan(mypol2, eps, allobj, minPts);
+            myCluster.getClusters();
+            Map<Integer, List<Integer>> clusterList = myCluster.cluster;
+            Iterator it = clusterList.entrySet().iterator();
+
+            int counter = 0;
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                List<Integer> ml = (List<Integer>) pair.getValue();
+                int key = (int) pair.getKey();
+                JSONObject item = new JSONObject();
+                for (int i : ml) {
+                    item.put(Integer.toString(i), Integer.toString(i));
+                }
+
+                item.put(Integer.toString(key), Integer.toString(key));
+                mylist.put("cluster " + Integer.toString(counter), item);
+                counter++;
+            }
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+
+        return builder.build();
+    }
+
+    private List<policy> retpol(Connection conn, List<Integer> idList, String table_name1, String table_name2, String obNames) {
+
+        JSONArray mylist = new JSONArray();
+        List<policy> mypol = new ArrayList<>();
+        List<policy> mypol1 = new ArrayList<>();
+        boolean[] myminmax = {false, false, false, true};
+        try {
+            int param = 1;
+
+            String joinQuery = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + obNames + "," + table_name2 + ".myorder "
+                    + " FROM " + table_name2
+                    + " INNER JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                    + " WHERE " + table_name1 + ".ID=?";
+
+            //     System.out.println(joinQuery2);
+            PreparedStatement stmt = conn.prepareStatement(joinQuery);
+            stmt.setInt(1, idList.get(0));
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+
+            int allobj = columnsNumber - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(2 + i + param);
+            }
+            //get obj names to perform the join quer
+
+            for (int id : idList) {
+
+                String joinQuery2 = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + obNames + "," + table_name2 + ".myorder "
+                        + " FROM " + table_name2
+                        + " INNER JOIN " + table_name1
+                        + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                        + " WHERE " + table_name1 + ".ID=?";
+
+                //     System.out.println(joinQuery2);
+                PreparedStatement stm = conn.prepareStatement(joinQuery2);
+                stm.setInt(1, id);
+                ResultSet resm = stm.executeQuery();
+
+                while (resm.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(resm.getInt(1));
+//                    pol.setPolicyName(resm.getString(2));
+                    double[] obj_values = new double[allobj];
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = resm.getDouble(3 + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pol.setOrder(resm.getString(columnsNumber));
+                    mypol.add(pol);
+                }
+                stm.close();
+            }
+
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        }
+        return mypol;
+    }
+
+    @GET
+    @Path("/prioritizationToClusterID/{table_name1}/{table_name2}/{prior}")
+    @Produces(MediaType.APPLICATION_JSON)
+    //works with achievement_table as table_name1 and game table as table_name2
+    //the id is from table_name1 id field as given from orderbypercentage3
+    public Response prioritizationToClusterID(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @PathParam("prior") String prior, @QueryParam("eps") double eps, @QueryParam("minPts") int minPts, @QueryParam("id") int id) throws JSONException {
+        JSONObject mylist = new JSONObject();
+        List<policy> mypol = new ArrayList<>();
+        List<policy> mypol2 = new ArrayList<>();
+        Connection conn = dbUtils.getConnection();
+        List<Integer> first = new ArrayList<>();
+        List<Integer> second = new ArrayList<>();
+        List<Integer> third = new ArrayList<>();
+        List<Integer> fourth = new ArrayList<>();
+        List<Integer> firstc = new ArrayList<>();
+        List<Integer> secondc = new ArrayList<>();
+        List<Integer> thirdc = new ArrayList<>();
+        List<Integer> fourthc = new ArrayList<>();
+        boolean belongs = false;
+        char[] pref = new char[6];
+        pref = prior.toCharArray();
+        //find 1s 2s 3s 4s
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '1') {
+                first.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '2') {
+                second.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '3') {
+                third.add(i);
+            }
+        }
+        for (int i = 0; i < pref.length; i++) {
+            if (pref[i] == '4') {
+                fourth.add(i);
+            }
+        }
+
+        String query1 = "SELECT * FROM " + table_name1;
+        JSONObject result = new JSONObject();
+        try {
+
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 4);
+            }
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(3 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
+            }
+            String parNames = "";
+            for (int i = 1; i < param; i++) {
+                parNames += "," + table_name1 + "." + rsmd.getColumnName(3 + i) + " ";
+            }
+
+            String whole = "SELECT " + table_name1 + ".ID " + obNames + " FROM " + table_name1 + " WHERE ";
+            for (int i = 0; i < first.size(); i++) {
+                whole += "" + objn[first.get(i)] + " BETWEEN 85 AND 100";
+                if (first.size() - i > 1) {
+                    whole += " AND ";
+                }
+            }
+            System.out.println(whole);
+            PreparedStatement stmf = conn.prepareStatement(whole);
+            ResultSet resmf = stmf.executeQuery();
+            while (resmf.next()) {
+                firstc.add(resmf.getInt(1));
+            }
+            if (firstc.size() < 3) {
+                for (int tmp : firstc) {
+                    if (tmp == id) {
+                        belongs = true;
+                    }
+                }
+                if (!belongs) {
+                    firstc.add(id);
+                }
+                mypol2 = retpol(conn, firstc, table_name1, table_name2, obNames);
+            } else {
+                resmf.beforeFirst();
+                while (resmf.next()) {
+                    double min = resmf.getDouble(first.get(0) + 2);
+                    for (int temp1 : first) {
+                        if (min > resmf.getDouble(temp1 + 2)) {
+                            min = resmf.getDouble(temp1 + 2);
+                        }
+                    }
+                    if (!second.isEmpty()) {
+                        boolean issmaller = true;
+                        double min2 = resmf.getDouble(second.get(0) + 2);
+                        for (int temp2 : second) {
+                            if (min2 > resmf.getDouble(temp2 + 2)) {
+                                min2 = resmf.getDouble(temp2 + 2);
+                            }
+                            if (resmf.getDouble(temp2 + 2) < min) {
+                                issmaller = issmaller & true;
+                            } else {
+                                issmaller = issmaller & false;
+                            }
+                        }
+                        if (issmaller) {
+                            secondc.add(resmf.getInt(1));
+
+                            if (!third.isEmpty()) {
+
+                                double min3 = resmf.getDouble(third.get(0) + 2);
+                                for (int temp3 : third) {
+                                    if (min3 > resmf.getDouble(temp3 + 2)) {
+                                        min3 = resmf.getDouble(temp3 + 2);
+                                    }
+                                    if (resmf.getDouble(temp3 + 2) < min2) {
+                                        issmaller = issmaller & true;
+                                    } else {
+                                        issmaller = issmaller & false;
+                                    }
+                                }
+                                if (issmaller) {
+                                    thirdc.add(resmf.getInt(1));
+
+                                    if (!fourth.isEmpty()) {
+
+                                        double min4 = resmf.getDouble(fourth.get(0) + 2);
+                                        for (int temp4 : fourth) {
+                                            if (min4 > resmf.getDouble(temp4 + 2)) {
+                                                min4 = resmf.getDouble(temp4 + 2);
+                                            }
+                                            if (resmf.getDouble(temp4 + 2) < min3) {
+                                                issmaller = issmaller & true;
+                                            } else {
+                                                issmaller = issmaller & false;
+                                            }
+                                        }
+                                        if (issmaller) {
+                                            fourthc.add(resmf.getInt(1));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (fourthc.size() > 2) {
+                    for (int tmp : fourthc) {
+                        if (tmp == id) {
+                            belongs = true;
+                        }
+                    }
+                    if (!belongs) {
+                        fourthc.add(id);
+                    }
+                    mypol2 = retpol(conn, fourthc, table_name1, table_name2, obNames);
+                } else if (thirdc.size() > 2) {
+                    for (int tmp : thirdc) {
+                        if (tmp == id) {
+                            belongs = true;
+                        }
+                    }
+                    if (!belongs) {
+                        thirdc.add(id);
+                    }
+                    mypol2 = retpol(conn, thirdc, table_name1, table_name2, obNames);
+                } else if (secondc.size() > 2) {
+                    for (int tmp : secondc) {
+                        if (tmp == id) {
+                            belongs = true;
+                        }
+                    }
+                    if (!belongs) {
+                        secondc.add(id);
+                    }
+                    mypol2 = retpol(conn, secondc, table_name1, table_name2, obNames);
+                } else {
+                    for (int tmp : firstc) {
+                        if (tmp == id) {
+                            belongs = true;
+                        }
+                    }
+                    if (!belongs) {
+                        firstc.add(id);
+                    }
+                    mypol2 = retpol(conn, firstc, table_name1, table_name2, obNames);
+                }
+            }
+            stmt.close();
+            conn.close();
+            DBScan myCluster = new DBScan(mypol2, eps, allobj, minPts);
+            myCluster.getClusters();
+            Map<Integer, List<Integer>> clusterList = myCluster.cluster;
+            Iterator it = clusterList.entrySet().iterator();
+
+            int counter = 0;
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                List<Integer> ml = (List<Integer>) pair.getValue();
+                int key = (int) pair.getKey();
+                JSONObject item = new JSONObject();
+                for (int i : ml) {
+                    item.put(Integer.toString(i), Integer.toString(i));
+                }
+
+                item.put(Integer.toString(key), Integer.toString(key));
+                mylist.put("cluster " + Integer.toString(counter), item);
+                counter++;
+            }
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put("belongs", Boolean.toString(belongs));
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+
         return builder.build();
     }
 

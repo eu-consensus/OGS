@@ -17,9 +17,9 @@ public class DBScan {
     public DBScan(List<policy> mypol, double eps, int allobj, int minPts) {
         for (policy mpol : mypol) {
             if (!visited.containsKey(mpol.getID())) {
-                visited.put(mpol.getID(), Boolean.TRUE);
                 List<policy> neighbors = getClosestNeighbors(mypol, mpol, allobj, eps);
-                if (neighbors.size() > minPts) {
+                visited.put(mpol.getID(), Boolean.TRUE);
+                if (neighbors.size() >= minPts) {//point is NOISE
                     cluster.put(mpol.getID(), new ArrayList<Integer>());
                     clustered.put(mpol.getID(), Boolean.TRUE);
                     expandCluster(mypol, mpol, neighbors, allobj, eps, minPts);
@@ -33,9 +33,9 @@ public class DBScan {
         for (policy temp : neighbors) {
             List<policy> closest = new ArrayList<>();
             if (!visited.containsKey(temp.getID())) {
-                visited.put(temp.getID(), Boolean.TRUE);
                 closest = getClosestNeighbors(mypol, temp, allobj, eps);//TODO check minpts before add)
-                if (closest.size() > minPts) {
+                visited.put(temp.getID(), Boolean.TRUE);
+                if (closest.size() >= minPts) {
                     for (policy cl : closest) {
                         if (!clustered.containsKey(cl.getID())) {
                             clustered.put(cl.getID(), true);
@@ -59,7 +59,7 @@ public class DBScan {
                 for (int w = 0; w < allobj; w++) {
                     sum += Math.pow(elem.getObjectives()[w] - temp.getObjectives()[w], 2);
                 }
-                if (Math.sqrt(sum) < eps) {//&& !visited.containsKey(temp.getID())) {//if euclidean distance <ε then add in cluster 
+                if (Math.sqrt(sum) < eps) {//if euclidean distance <ε then add in cluster 
                     ret.add(temp);
                 }
             }
@@ -87,23 +87,37 @@ public class DBScan {
                     ret.addAll(retAll(ret));
                     temp.addAll(ret);
                     cluster.put(key, temp);
-                }else it.remove();
-            } else {
-                it.remove();
-            }
-
-        }
-    }
-    public List<Integer> retAll(List<Integer> mlist){
-        List<Integer> ret=new ArrayList<>();
-        Iterator<Integer> it=mlist.iterator();
-
-            while(it.hasNext()){
-                int temp=it.next();
-                if(cluster.containsKey(temp)){
-                    ret.addAll(retAll(cluster.get(temp)));
-                    clusterRemove.put(temp,true);
+                } else {
+                    it.remove();
                 }
+            }else{
+                it.remove();//if it is empty then its not a cluster
+            }
+        }
+//        //remove all empty lists that belong in other clusters
+//        it = cluster.entrySet().iterator();
+//        while (it.hasNext()) {
+//            Map.Entry pair = (Map.Entry) it.next();
+//            List<Integer> temp = (List<Integer>) pair.getValue();
+//            int key = (Integer) pair.getKey();
+//            if (temp.isEmpty()) {
+//                if (clusterRemove.containsKey(key)) {
+//                    it.remove();
+//                }
+//            }
+//        }
+    }
+
+    public List<Integer> retAll(List<Integer> mlist) {
+        List<Integer> ret = new ArrayList<>();
+        Iterator<Integer> it = mlist.iterator();
+
+        while (it.hasNext()) {
+            int temp = it.next();
+            if (cluster.containsKey(temp)) {
+                ret.addAll(retAll(cluster.get(temp)));
+                clusterRemove.put(temp, true);
+            }
         }
         return ret;
     }
