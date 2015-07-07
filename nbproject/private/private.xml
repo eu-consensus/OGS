@@ -3,8 +3,14 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/src/java/methods/DBScan.java</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/web/dbLoad.jsp</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/web/circles.jsp</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/src/java/methods/Spectral.java</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/src/java/servlets/Upload.java</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/src/java/methods/dbUtils.java</file>
             <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/src/java/web/RestGameBiofuels.java</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/web/askcircles.html</file>
+            <file>file:/C:/Users/anu/Documents/NetBeansProjects/consensusN/src/java/servlets/createCircles.java</file>
         </group>
     </open-files>
 </project-private>

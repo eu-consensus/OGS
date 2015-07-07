@@ -36,12 +36,17 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import methods.DBScan;
 import methods.Join_keep;
+import methods.Kmeans;
+import methods.Spectral;
 import methods.dbUtils;
 import methods.maj;
 import methods.methods;
 import methods.methods.MajComparator;
 import static methods.methods.find_space;
+import static methods.methods.maximizationofObjective;
 import static methods.methods.merge;
+import static methods.methods.minimizationofObjective;
+import static methods.methods.paretoG;
 import methods.policy;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,7 +56,7 @@ import org.json.JSONObject;
 @Stateless
 public class RestGameBiofuels {
 
-    String[] parameters = {"EU biofuel policies", "Source of EU biofuel policies", "Solid biomass demand EU", "Bioenergy scenario ROW", " LUC regulations", "Level of biodiversity protection", "Change in food diets", "Yield development"};
+    String[] parameters = {"EU_biofuel_policies", "Source_of_EU_biofuel_policies", "Solid_biomass_demand_EU", "Bioenergy_scenario_ROW", " LUC_regulations", "Level_of_biodiversity_protection", "Change_in_food_diets", "Yield_development"};
 
     @GET
     @Path("/{table_name}")
@@ -1234,6 +1239,7 @@ public class RestGameBiofuels {
     @Path("/orderbypercentage3/{table_name1}/{table_name2}")
     @Produces(MediaType.APPLICATION_JSON)
     //returns solutions with wildcard sql query in DB in String Array ?ids=24041&ids=24117
+    //returns table_name1 id
     public Response getbyOrderPercentage3(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("par") List<String> crit) {
 
         Connection conn = dbUtils.getConnection();
@@ -1630,7 +1636,8 @@ public class RestGameBiofuels {
         JSONArray mylist = new JSONArray();
         List<policy> mypol = new ArrayList<>();
         List<policy> mypol1 = new ArrayList<>();
-        boolean[] myminmax = {false, false, false, true};
+        //on actual data  boolean[] myminmax = {false, false, false, true};
+        boolean[] myminmax = {true, true, true, true};
         try {
             int param = 1;
 
@@ -1761,6 +1768,307 @@ public class RestGameBiofuels {
         return mypol;
     }
 
+    private JSONObject ret7(Connection conn, String table_name1, String table_name2, String parNames, String obNames, List<Integer> idList1, List<Integer> idList2, int polIDer, boolean belongs) throws JSONException {
+        int counter = idList1.size();
+        JSONArray mylist = new JSONArray();
+        JSONArray dominatedbypoolList = new JSONArray();
+        JSONArray dominatedbycategoryList = new JSONArray();
+        JSONArray dominatedbypooloptimalList = new JSONArray();
+        JSONObject finalL = new JSONObject();
+        List<policy> mypol = new ArrayList<>();
+        List<policy> mypol1 = new ArrayList<>();
+        List<policy> mypol3 = new ArrayList<>();
+        List<policy> mypol4 = new ArrayList<>();
+        List<policy> mypol5=new ArrayList<>();
+        List<policy> optpol=new ArrayList<>();
+        int posize = 0;//pool optimal in this category
+        int cosize = 0;//category optimal in this category
+        //on actual data  boolean[] myminmax = {false, false, false, true};
+        boolean[] myminmax = {true, true, true, true};
+        try {
+            int param = 1;
+
+            String joinQuery = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+                    + " FROM " + table_name2
+                    + " INNER JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                    + " WHERE " + table_name1 + ".ID=?";
+
+            //     System.out.println(joinQuery2);
+            PreparedStatement stmt = conn.prepareStatement(joinQuery);
+            stmt.setInt(1, polIDer);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            //objective parameters -criteria 
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 3);
+            }
+            int allobj = columnsNumber - param - 2;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(2 + i + param);
+            }
+            //get obj names to perform the join query
+            int beforeobj = param + 2;
+            policy polID = new policy(allobj, 0);
+            while (res.next()) {
+
+                polID.setID(res.getInt(1));
+                polID.setPolicyName(res.getString(2));
+                double[] obj_values = new double[allobj];
+
+                String[] objparam = new String[param - 1];
+                for (int i = 0; i < param - 1; i++) {
+                    objparam[i] = res.getString(i + 3);
+                }
+                for (int i = 0; i < allobj; i++) {
+                    obj_values[i] = res.getDouble(beforeobj + i);
+                }
+                polID.setObjectives(obj_values);
+                polID.setPolicyParameters(objparam);
+                polID.setDominated(res.getInt(columnsNumber));
+            }
+
+            for (int id : idList1) {
+
+                String joinQuery2 = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+                        + " FROM " + table_name2
+                        + " INNER JOIN " + table_name1
+                        + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                        + " WHERE " + table_name1 + ".ID=?";
+
+                //     System.out.println(joinQuery2);
+                PreparedStatement stm = conn.prepareStatement(joinQuery2);
+                stm.setInt(1, id);
+                ResultSet resm = stm.executeQuery();
+
+                while (resm.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(resm.getInt(1));
+                    pol.setPolicyName(resm.getString(2));
+                    double[] obj_values = new double[allobj];
+
+                    String[] objparam = new String[param - 1];
+                    for (int i = 0; i < param - 1; i++) {
+                        objparam[i] = resm.getString(i + 3);
+                    }
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = resm.getDouble(beforeobj + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pol.setPolicyParameters(objparam);
+                    pol.setDominated(resm.getInt(columnsNumber));
+                    if (resm.getInt(columnsNumber) == 0) {
+                        posize++;
+                       optpol.add(pol); 
+                    }
+                    mypol.add(pol);
+                }
+                stm.close();
+            }
+//            In list 1 (my prioritization category) i find the dominated list for this specific policy ID
+            List<Integer> idList3 = getDominatedbyList(mypol, polID, myminmax);
+//           I later add this policyID in the list so as to assign score points
+            if (!belongs) {
+                mypol.add(polID);
+            }
+            mypol1 = methods.paretoG(mypol, myminmax);
+            List<policy> mypol2 = setScoreCAT(mypol1, belongs);
+            for (policy temp : mypol2) {
+                if (temp.getDominatedbycategory() == 0) {
+                    cosize++;
+                }
+                if (temp.getID() == polIDer) {
+                    JSONObject policy = new JSONObject();
+                    policy.put("ID", temp.getID());
+                    policy.put("policy", temp.getPolicyName());
+                    for (int i = 0; i < param - 1; i++) {
+                        policy.put(parameters[i], temp.getPolicyParameters()[i]);
+                    }
+                    for (int i = 0; i < allobj; i++) {
+                        policy.put(objn[i], temp.getObjectives()[i]);
+                    }
+                    policy.put("dominatedByCategory", temp.getDominatedbycategory());
+                    policy.put("dominatedbypool", temp.getDominated());
+                    policy.put("objscore", temp.getScore());
+                    mylist.put(policy);
+                }
+
+            }
+            for (int id : idList2) {
+
+                String joinQuery2 = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+                        + " FROM " + table_name2
+                        + " INNER JOIN " + table_name1
+                        + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                        + " WHERE " + table_name1 + ".ID=?";
+
+                //     System.out.println(joinQuery2);
+                PreparedStatement stm = conn.prepareStatement(joinQuery2);
+                stm.setInt(1, id);
+                ResultSet resm = stm.executeQuery();
+
+                while (resm.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(resm.getInt(1));
+                    pol.setPolicyName(resm.getString(2));
+                    double[] obj_values = new double[allobj];
+
+                    String[] objparam = new String[param - 1];
+                    for (int i = 0; i < param - 1; i++) {
+                        objparam[i] = resm.getString(i + 3);
+                    }
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = resm.getDouble(beforeobj + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pol.setPolicyParameters(objparam);
+                    pol.setDominated(resm.getInt(columnsNumber));
+                    mypol3.add(pol);
+                }
+                stm.close();
+            }
+            for (policy temp : mypol3) {
+
+                JSONObject policy = new JSONObject();
+                policy.put("ID", temp.getID());
+                policy.put("policy", temp.getPolicyName());
+                for (int i = 0; i < param - 1; i++) {
+                    policy.put(parameters[i], temp.getPolicyParameters()[i]);
+                }
+                for (int i = 0; i < allobj; i++) {
+                    policy.put(objn[i], temp.getObjectives()[i]);
+                }
+                dominatedbypoolList.put(policy);
+
+            }
+            for (int id : idList3) {
+
+                String joinQuery2 = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+                        + " FROM " + table_name2
+                        + " INNER JOIN " + table_name1
+                        + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                        + " WHERE " + table_name1 + ".ID=?";
+
+                //     System.out.println(joinQuery2);
+                PreparedStatement stm = conn.prepareStatement(joinQuery2);
+                stm.setInt(1, id);
+                ResultSet resm = stm.executeQuery();
+
+                while (resm.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(resm.getInt(1));
+                    pol.setPolicyName(resm.getString(2));
+                    double[] obj_values = new double[allobj];
+
+                    String[] objparam = new String[param - 1];
+                    for (int i = 0; i < param - 1; i++) {
+                        objparam[i] = resm.getString(i + 3);
+                    }
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = resm.getDouble(beforeobj + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pol.setPolicyParameters(objparam);
+                    pol.setDominated(resm.getInt(columnsNumber));
+                    mypol4.add(pol);
+                }
+                stm.close();
+            }
+            for (policy temp : mypol4) {
+                JSONObject policy = new JSONObject();
+                policy.put("ID", temp.getID());
+                policy.put("policy", temp.getPolicyName());
+                for (int i = 0; i < param - 1; i++) {
+                    policy.put(parameters[i], temp.getPolicyParameters()[i]);
+                }
+                for (int i = 0; i < allobj; i++) {
+                    policy.put(objn[i], temp.getObjectives()[i]);
+                }
+                dominatedbycategoryList.put(policy);
+            }
+
+            List<Integer> idList5 = getDominatedbyList(optpol, polID, myminmax);
+             for (int id : idList5) {
+
+                String joinQuery2 = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+                        + " FROM " + table_name2
+                        + " INNER JOIN " + table_name1
+                        + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
+                        + " WHERE " + table_name1 + ".ID=?";
+
+                //     System.out.println(joinQuery2);
+                PreparedStatement stm = conn.prepareStatement(joinQuery2);
+                stm.setInt(1, id);
+                ResultSet resm = stm.executeQuery();
+
+                while (resm.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(resm.getInt(1));
+                    pol.setPolicyName(resm.getString(2));
+                    double[] obj_values = new double[allobj];
+
+                    String[] objparam = new String[param - 1];
+                    for (int i = 0; i < param - 1; i++) {
+                        objparam[i] = resm.getString(i + 3);
+                    }
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = resm.getDouble(beforeobj + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pol.setPolicyParameters(objparam);
+                    pol.setDominated(resm.getInt(columnsNumber));
+                    mypol5.add(pol);
+                }
+                stm.close();
+            }
+            for (policy temp : mypol5) {
+                JSONObject policy = new JSONObject();
+                policy.put("ID", temp.getID());
+                policy.put("policy", temp.getPolicyName());
+                for (int i = 0; i < param - 1; i++) {
+                    policy.put(parameters[i], temp.getPolicyParameters()[i]);
+                }
+                for (int i = 0; i < allobj; i++) {
+                    policy.put(objn[i], temp.getObjectives()[i]);
+                }
+                dominatedbypooloptimalList.put(policy);
+            }
+             
+            finalL.put("policy", mylist);
+            finalL.put("poolDominators", dominatedbypoolList);
+            finalL.put("pooloptimalDominators", dominatedbypooloptimalList);
+            finalL.put("categoryDominators", dominatedbycategoryList);
+            finalL.put("counter", counter);
+            finalL.put("belongs", belongs);
+            if (dominatedbypoolList.length() == 0 & belongs) {
+                finalL.put("pobelongs", true);
+            } else {
+                finalL.put("pobelongs", false);
+            }
+            if (dominatedbycategoryList.length() == 0 & belongs) {
+                finalL.put("cobelongs", true);
+            } else {
+                finalL.put("cobelongs", false);
+            }
+            if (!belongs & dominatedbycategoryList.length() == 0) {
+                cosize--;
+            }
+            finalL.put("cosize", cosize);
+            finalL.put("posize", posize);
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        }
+        return finalL;
+    }
+
     @GET
     @Path("/score1/{table_name1}/{table_name2}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -1768,6 +2076,7 @@ public class RestGameBiofuels {
     //there i check for optimallity within its own category in this mixed category return boolean true and score from this category if inside otherwise return boolean false and closeness score 
     public Response getScorebyID(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("prior") String priority, @QueryParam("id") int id) {
         {
+            boolean[] myminmax = {true, true, true, true};
 //get achievement_table ID from percentage3
             Connection conn = dbUtils.getConnection();
             List<Integer> first = new ArrayList<>();
@@ -1779,7 +2088,7 @@ public class RestGameBiofuels {
             List<Integer> thirdc = new ArrayList<>();
             List<Integer> fourthc = new ArrayList<>();
             boolean belongs = false;
-            JSONArray mylist = new JSONArray();
+            JSONObject mylist = new JSONObject();
             char[] pref = new char[6];
             pref = priority.toCharArray();
             //find 1s 2s 3s 4s
@@ -1806,6 +2115,7 @@ public class RestGameBiofuels {
 
             String query1 = "SELECT * FROM " + table_name1;
             JSONObject result = new JSONObject();
+            List<policy> pool = new ArrayList<>();
             try {
 
                 PreparedStatement stmt = conn.prepareStatement(query1);
@@ -1836,6 +2146,33 @@ public class RestGameBiofuels {
                 for (int i = 1; i < param; i++) {
                     parNames += "," + table_name1 + "." + rsmd.getColumnName(3 + i) + " ";
                 }
+                while (res.next()) {
+                    policy pol = new policy(allobj, 0);
+                    pol.setID(res.getInt(1));
+//                    pol.setPolicyName(res.getString(2));
+                    double[] obj_values = new double[allobj];
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = res.getDouble(param + 3 + i);
+                    }
+                    pol.setObjectives(obj_values);
+                    pool.add(pol);
+                }
+
+                String query2 = "SELECT * FROM " + table_name1 + " WHERE ID=?";
+                PreparedStatement st2 = conn.prepareStatement(query2);
+                st2.setInt(1, id);
+                ResultSet res2 = st2.executeQuery();
+                policy polID = new policy(allobj, 0);
+                while (res2.next()) {
+                    polID.setID(res2.getInt(1));
+//                    pol.setPolicyName(res.getString(2));
+                    double[] obj_values = new double[allobj];
+                    for (int i = 0; i < allobj; i++) {
+                        obj_values[i] = res2.getDouble(param + 3 + i);
+                    }
+                    polID.setObjectives(obj_values);
+                }
+                List<Integer> dominatedbypoolList = getDominatedbyList(pool, polID, myminmax);
 
                 String whole = "SELECT " + table_name1 + ".ID " + obNames + " FROM " + table_name1 + " WHERE ";
                 for (int i = 0; i < first.size(); i++) {
@@ -1856,10 +2193,11 @@ public class RestGameBiofuels {
                             belongs = true;
                         }
                     }
-                    if (!belongs) {
-                        firstc.add(id);
-                    }
-                    mylist = ret2(conn, firstc, table_name1, table_name2, parNames, obNames);
+//                    if (!belongs) {
+//                        firstc.add(id);
+//                    }
+
+                    mylist = ret7(conn, table_name1, table_name2, parNames, obNames, firstc, dominatedbypoolList, id, belongs);
                 } else {
                     resmf.beforeFirst();
                     while (resmf.next()) {
@@ -1929,40 +2267,40 @@ public class RestGameBiofuels {
                                 belongs = true;
                             }
                         }
-                        if (!belongs) {
-                            fourthc.add(id);
-                        }
-                        mylist = ret2(conn, fourthc, table_name1, table_name2, parNames, obNames);
+//                        if (!belongs) {
+//                            fourthc.add(id);
+//                        }
+                        mylist = ret7(conn, table_name1, table_name2, parNames, obNames, fourthc, dominatedbypoolList, id, belongs);
                     } else if (thirdc.size() > 2) {
                         for (int tmp : thirdc) {
                             if (tmp == id) {
                                 belongs = true;
                             }
                         }
-                        if (!belongs) {
-                            thirdc.add(id);
-                        }
-                        mylist = ret2(conn, thirdc, table_name1, table_name2, parNames, obNames);
+//                        if (!belongs) {
+//                            thirdc.add(id);
+//                        }
+                        mylist = ret7(conn, table_name1, table_name2, parNames, obNames, thirdc, dominatedbypoolList, id, belongs);
                     } else if (secondc.size() > 2) {
                         for (int tmp : secondc) {
                             if (tmp == id) {
                                 belongs = true;
                             }
                         }
-                        if (!belongs) {
-                            secondc.add(id);
-                        }
-                        mylist = ret2(conn, secondc, table_name1, table_name2, parNames, obNames);
+//                        if (!belongs) {
+//                            secondc.add(id);
+//                        }
+                        mylist = ret7(conn, table_name1, table_name2, parNames, obNames, secondc, dominatedbypoolList, id, belongs);
                     } else {
                         for (int tmp : firstc) {
                             if (tmp == id) {
                                 belongs = true;
                             }
                         }
-                        if (!belongs) {
-                            firstc.add(id);
-                        }
-                        mylist = ret2(conn, firstc, table_name1, table_name2, parNames, obNames);
+//                        if (!belongs) {
+//                            firstc.add(id);
+//                        }
+                        mylist = ret7(conn, table_name1, table_name2, parNames, obNames, firstc, dominatedbypoolList, id, belongs);
                     }
                 }
                 stmt.close();
@@ -1970,8 +2308,7 @@ public class RestGameBiofuels {
                 DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
                 Date today = Calendar.getInstance().getTime();
                 String reportDate = df.format(today);
-                result.put("belongs", Boolean.toString(belongs));
-                result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+                result.put("results", mylist);
             } catch (SQLException ex) {
                 System.out.print(ex.getMessage());
             } catch (JSONException ex) {
@@ -1985,6 +2322,7 @@ public class RestGameBiofuels {
 
     @GET
     @Path("/distance1/{table_name1}/{table_name2}")
+    //table name1 percentages
     @Produces(MediaType.APPLICATION_JSON)
     public Response getDistance(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("prior") String priority, @QueryParam("id") int id) {
         {
@@ -2162,6 +2500,7 @@ public class RestGameBiofuels {
         }
     }
 //returns euclidean distance from all category and this point ------>mean average value
+//percentage data
 
     private JSONArray ret3(Connection conn, List<Integer> idList, String table_name1, String table_name2, String parNames, String obNames, int idc) throws JSONException {
 
@@ -2171,7 +2510,7 @@ public class RestGameBiofuels {
         try {
             int param = 1;
 
-            String joinQuery = "SELECT " + table_name2 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+            String joinQuery = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + " , " + table_name2 + ".dominatedbypool"
                     + " FROM " + table_name2
                     + " INNER JOIN " + table_name1
                     + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
@@ -2214,7 +2553,7 @@ public class RestGameBiofuels {
 
             for (int id : idList) {
 
-                String joinQuery2 = "SELECT " + table_name2 + ".ID," + table_name1 + ".policy" + parNames + obNames + "," + table_name2 + ".dominatedbypool "
+                String joinQuery2 = "SELECT " + table_name1 + ".ID," + table_name1 + ".policy" + parNames + obNames + " , " + table_name2 + ".dominatedbypool"
                         + " FROM " + table_name2
                         + " INNER JOIN " + table_name1
                         + " ON " + table_name2 + ".P_ID=" + table_name1 + ".P_ID"
@@ -2233,16 +2572,20 @@ public class RestGameBiofuels {
                         obj_values[i] = resm.getDouble(beforeobj + i);
                     }
                     pol.setObjectives(obj_values);
+                    pol.setDominated(resm.getInt(columnsNumber));
                     mypol.add(pol);
                 }
                 stm.close();
             }
 //calculate Angle distance
-            double top_sum = 0, top_sum1 = 0;
-            double bot_sum1 = 0, bot_sum2 = 0;
+            double top_sum = 0, top_sum1 = 0, top_sum2 = 0;
+            int total_optimal_pool = 0;
+            int total_optimal_category = 0;
             double euclid = 0;
-            double angle = 0;
-            for (policy temp : mypol) {
+            List<policy> mypol2 = new ArrayList<>();
+            boolean[] myminmax = {true, true, true, true};
+            mypol2 = paretoG(mypol, myminmax);
+            for (policy temp : mypol2) {
                 //ABC angle d- dimensions
                 //Euclidean distance d-dimensions
                 JSONObject policy = new JSONObject();
@@ -2250,22 +2593,40 @@ public class RestGameBiofuels {
 //                for (int i = 0; i < allobj; i++) {
 //                    policy.put(objn[i], temp.getObjectives()[i]);
 //                }
+
                 for (int i = 0; i < temp.getObjectives().length; i++) {
-                    top_sum += comp.getObjectives()[i] * temp.getObjectives()[i];
-                    bot_sum1 += Math.pow(comp.getObjectives()[i], 2);
-                    bot_sum2 += Math.pow(temp.getObjectives()[i], 2);
+                    if (temp.getDominated() == 0) {
+                        top_sum += Math.pow(comp.getObjectives()[i] - temp.getObjectives()[i], 2);
+                        total_optimal_pool++;
+                    }
+                    if (temp.getDominatedbycategory() == 0) {
+                        top_sum2 += Math.pow(comp.getObjectives()[i] - temp.getObjectives()[i], 2);
+                        total_optimal_category++;
+                    }
+//                    top_sum += comp.getObjectives()[i] * temp.getObjectives()[i];
+//                    bot_sum1 += Math.pow(comp.getObjectives()[i], 2);
+//                    bot_sum2 += Math.pow(temp.getObjectives()[i], 2);
                     top_sum1 += Math.pow(comp.getObjectives()[i] - temp.getObjectives()[i], 2);
 
                 }
-                euclid += Math.sqrt(top_sum);
-                angle += top_sum / (Math.sqrt(bot_sum1) * Math.sqrt(bot_sum2));
+                euclid += Math.sqrt(top_sum1);
+//                angle += top_sum / (Math.sqrt(bot_sum1) * Math.sqrt(bot_sum2));
 //                policy.put("Euclidean distance from policy", euclid);
 //                policy.put("Angle distance from policy",top_sum/(Math.sqrt(bot_sum1)*Math.sqrt(bot_sum2)));
 //                mylist.put(policy);
             }
             JSONObject policy = new JSONObject();
-            policy.put("total euclid", euclid / mypol.size());
-            policy.put("total angle", angle / mypol.size());
+            policy.put("group distance", euclid / mypol.size());
+            if (total_optimal_pool != 0) {
+                policy.put("pool optimal distance", Math.sqrt(top_sum) / total_optimal_pool);
+            } else {
+                policy.put("pool optimal distance", "none");
+            }
+            if (total_optimal_category != 0) {
+                policy.put("category optimal distance", Math.sqrt(top_sum2) / total_optimal_category);
+            } else {
+                policy.put("category optimal distance", "none");
+            }
             mylist.put(policy);
         } catch (SQLException ex) {
             System.out.print(ex.getMessage());
@@ -2274,9 +2635,9 @@ public class RestGameBiofuels {
     }
 
     @GET
-    @Path("/cluster/{table_name1}/{table_name2}")
+    @Path("/DBSCAN/{table_name1}/{table_name2}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getCluster(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("eps") double eps, @QueryParam("minPts") int minPts) {
+    public Response getDBSCAN(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("eps") double eps, @QueryParam("minPts") int minPts) {
 
         String query1 = "SELECT * FROM " + table_name1;
         boolean[] myminmax = {false, false, false, true};
@@ -2298,17 +2659,17 @@ public class RestGameBiofuels {
             }
             String[] objp = new String[param - 1];
             for (int i = 0; i < param - 1; i++) {
-                objp[i] = rsmd.getColumnName(i + 4);
+                objp[i] = rsmd.getColumnName(i + 3);
             }
-            int allobj = columnsNumber - param - 2;
+            int allobj = columnsNumber - param - 1;
             String[] objn = new String[allobj];
             for (int i = 0; i < allobj; i++) {
-                objn[i] = rsmd.getColumnName(3 + i + param);
+                objn[i] = rsmd.getColumnName(2 + i + param);
             }
             //get obj names to perform the join query
             String obNames = "";
             for (int i = 0; i < allobj; i++) {
-                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 3 + i) + " ";
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + " ";
             }
 
             String joinQuery2 = "SELECT " + table_name1 + ".ID" + obNames
@@ -2364,7 +2725,7 @@ public class RestGameBiofuels {
                 pol.setObjectives(obj_values);
                 mypol.add(pol);
             }
-            DBScan myCluster = new DBScan(mypol, eps, allobj, minPts);
+            DBScan myCluster = new DBScan(mypol, eps, minPts);
             myCluster.getClusters();
             Map<Integer, List<Integer>> clusterList = myCluster.cluster;
             Iterator it = clusterList.entrySet().iterator();
@@ -2414,7 +2775,7 @@ public class RestGameBiofuels {
     }
 
     @GET
-    @Path("/percentageCluster/{table_name1}/{table_name2}")
+    @Path("/percentageDBSCAN/{table_name1}/{table_name2}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getpercentageCluster(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("eps") double eps, @QueryParam("minPts") int minPts) {
 
@@ -2470,7 +2831,7 @@ public class RestGameBiofuels {
                 pol.setObjectives(obj_values);
                 mypol.add(pol);
             }
-            DBScan myCluster = new DBScan(mypol, eps, allobj, minPts);
+            DBScan myCluster = new DBScan(mypol, eps, minPts);
             myCluster.getClusters();
             Map<Integer, List<Integer>> clusterList = myCluster.cluster;
             Iterator it = clusterList.entrySet().iterator();
@@ -2684,7 +3045,7 @@ public class RestGameBiofuels {
             }
             stmt.close();
             conn.close();
-            DBScan myCluster = new DBScan(mypol2, eps, allobj, minPts);
+            DBScan myCluster = new DBScan(mypol2, eps, minPts);
             myCluster.getClusters();
             Map<Integer, List<Integer>> clusterList = myCluster.cluster;
             Iterator it = clusterList.entrySet().iterator();
@@ -2716,6 +3077,46 @@ public class RestGameBiofuels {
         ResponseBuilder builder = Response.ok(result.toString());
 
         return builder.build();
+    }
+
+    private static List<policy> setScoreCAT(List<policy> mypol, boolean belongs) {
+        Collections.sort(mypol, new methods.polComparatorCAT());//sorted by category then by pool
+
+        int amount = mypol.size(); //assign points to all solutions
+        int top_score = amount * 10;
+        int step = 1; //find step to reducing points
+        int rank = 1;
+        int last = 0;
+        int last_dom = 0;
+        int last_score = 0;
+        int prev_dom_by = 0;
+        int b = 75;
+        for (policy pol : mypol) {
+            if (pol.getDominated() == 0 && pol.getDominatedbycategory() == 0) {
+                pol.setScore(top_score);
+                last_score = top_score;
+            }
+            if (pol.getDominatedbycategory() > last_dom) {
+                last_dom = pol.getDominatedbycategory();
+                last_score -= step * 20;
+            }
+            if (pol.getDominated() > prev_dom_by) {
+                last_score -= 10;
+            }
+            pol.setScore(last_score);
+            prev_dom_by = pol.getDominated();
+        }
+        int bottom = Math.abs(top_score - last_score);
+        int top = 0;
+        for (policy pol : mypol) {
+            top = Math.abs(pol.getScore() - last_score) * b;
+            if (belongs) {
+                pol.setScore((top / bottom) + 25);
+            } else {
+                pol.setScore(top / bottom);
+            }
+        }
+        return mypol;
     }
 
     private List<policy> retpol(Connection conn, List<Integer> idList, String table_name1, String table_name2, String obNames) {
@@ -2987,7 +3388,7 @@ public class RestGameBiofuels {
             }
             stmt.close();
             conn.close();
-            DBScan myCluster = new DBScan(mypol2, eps, allobj, minPts);
+            DBScan myCluster = new DBScan(mypol2, eps, minPts);
             myCluster.getClusters();
             Map<Integer, List<Integer>> clusterList = myCluster.cluster;
             Iterator it = clusterList.entrySet().iterator();
@@ -3023,4 +3424,298 @@ public class RestGameBiofuels {
         return builder.build();
     }
 
+    @GET
+    @Path("/KMEANS/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getKMEANS(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("kmeans") int kmeans) {
+
+        String query1 = "SELECT * FROM " + table_name1;
+        boolean[] myminmax = {false, false, false, true};
+        double[] best, worse;
+        JSONObject result = new JSONObject();
+        JSONObject mylist = new JSONObject();
+        List<policy> mypol = new ArrayList<>();
+        try {
+            Connection conn = dbUtils.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 3);
+            }
+            int allobj = columnsNumber - param - 1;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(2 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + " ";
+            }
+
+            String joinQuery2 = "SELECT " + table_name1 + ".ID" + obNames + ", " + table_name2 + ".myorder"
+                    + " FROM " + table_name2
+                    + " INNER JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID";
+            System.out.println(joinQuery2);
+            PreparedStatement st = conn.prepareStatement(joinQuery2);
+            ResultSet resm = st.executeQuery();
+
+            best = new double[allobj];
+            worse = new double[allobj];
+            if (resm.next()) {
+                for (int i = 0; i < allobj; i++) {
+                    best[i] = resm.getDouble(2 + i);
+                    worse[i] = resm.getDouble(2 + i);
+                }
+            }
+            while (resm.next()) {
+                double[] obj_valuestest = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+
+                    obj_valuestest[i] = resm.getDouble(2 + i);
+                    if (myminmax[i]) {
+                        if (best[i] < obj_valuestest[i]) {
+                            best[i] = obj_valuestest[i];
+                        }
+                        if (worse[i] > obj_valuestest[i]) {
+                            worse[i] = obj_valuestest[i];
+                        }
+                    } else {
+                        if (best[i] > obj_valuestest[i]) {
+                            best[i] = obj_valuestest[i];
+                        }
+                        if (worse[i] < obj_valuestest[i]) {
+                            worse[i] = obj_valuestest[i];
+                        }
+                    }
+                }
+            }
+            resm.beforeFirst();
+            while (resm.next()) {
+                policy pol = new policy(objn.length, 0);
+                pol.setID(resm.getInt(1));
+                double[] obj_values = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+                    if (worse[i] == best[i]) {
+                        obj_values[i] = 1.0;
+                    } else {
+                        obj_values[i] = Math.abs(resm.getDouble(2 + i) - worse[i]) / Math.abs(best[i] - worse[i]);
+                    }
+                }
+                pol.setObjectives(obj_values);
+                pol.setOrder(resm.getString(allobj + 2));
+                mypol.add(pol);
+            }
+            Kmeans myCluster = new Kmeans(mypol, kmeans);
+            myCluster.reloop(mypol, kmeans);
+            Map<Integer, List<policy>> clusterList = myCluster.cluster;
+            Iterator it = clusterList.entrySet().iterator();
+            int counter = 0;
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                List<policy> ml = (List<policy>) pair.getValue();
+                int key = (int) pair.getKey();
+                JSONObject item = new JSONObject();
+                for (policy i : ml) {
+                    item.put(Integer.toString(i.getID()), i.getOrder());
+                }
+                mylist.put("cluster " + Integer.toString(counter), item);
+                counter++;
+            }
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+            stmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    @GET
+    @Path("/SPECTRAL/{table_name1}/{table_name2}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getSpectral(@Context HttpServletRequest request, @PathParam("table_name1") String table_name1, @PathParam("table_name2") String table_name2, @QueryParam("kmeans") int kmeans) {
+
+        String query1 = "SELECT * FROM " + table_name1;
+        boolean[] myminmax = {false, false, false, true};
+        double[] best, worse;
+        JSONObject result = new JSONObject();
+        JSONObject mylist = new JSONObject();
+        List<policy> mypol = new ArrayList<>();
+        try {
+            Connection conn = dbUtils.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query1);
+            ResultSet res = stmt.executeQuery();
+            ResultSetMetaData rsmd = res.getMetaData();
+            int columnsNumber = rsmd.getColumnCount();
+            int param = 1;
+            for (int i = 1; i < columnsNumber + 1; i++) {
+                if (rsmd.getColumnName(i).contains("parameter")) {
+                    param++;
+                }
+            }
+            String[] objp = new String[param - 1];
+            for (int i = 0; i < param - 1; i++) {
+                objp[i] = rsmd.getColumnName(i + 3);
+            }
+            int allobj = columnsNumber - param - 1;
+            String[] objn = new String[allobj];
+            for (int i = 0; i < allobj; i++) {
+                objn[i] = rsmd.getColumnName(2 + i + param);
+            }
+            //get obj names to perform the join query
+            String obNames = "";
+            for (int i = 0; i < allobj; i++) {
+                obNames += "," + table_name1 + "." + rsmd.getColumnName(param + 2 + i) + " ";
+            }
+
+            String joinQuery2 = "SELECT " + table_name1 + ".ID" + obNames
+                    + " FROM " + table_name2
+                    + " INNER JOIN " + table_name1
+                    + " ON " + table_name2 + ".P_ID=" + table_name1 + ".ID";
+            System.out.println(joinQuery2);
+            PreparedStatement st = conn.prepareStatement(joinQuery2);
+            ResultSet resm = st.executeQuery();
+
+            best = new double[allobj];
+            worse = new double[allobj];
+            if (resm.next()) {
+                for (int i = 0; i < allobj; i++) {
+                    best[i] = resm.getDouble(2 + i);
+                    worse[i] = resm.getDouble(2 + i);
+                }
+            }
+            while (resm.next()) {
+                double[] obj_valuestest = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+
+                    obj_valuestest[i] = resm.getDouble(2 + i);
+                    if (myminmax[i]) {
+                        if (best[i] < obj_valuestest[i]) {
+                            best[i] = obj_valuestest[i];
+                        }
+                        if (worse[i] > obj_valuestest[i]) {
+                            worse[i] = obj_valuestest[i];
+                        }
+                    } else {
+                        if (best[i] > obj_valuestest[i]) {
+                            best[i] = obj_valuestest[i];
+                        }
+                        if (worse[i] < obj_valuestest[i]) {
+                            worse[i] = obj_valuestest[i];
+                        }
+                    }
+                }
+            }
+            resm.beforeFirst();
+            while (resm.next()) {
+                policy pol = new policy(objn.length, 0);
+                pol.setID(resm.getInt(1));
+                double[] obj_values = new double[allobj];
+                for (int i = 0; i < allobj; i++) {
+                    if (worse[i] == best[i]) {
+                        obj_values[i] = 1.0;
+                    } else {
+                        obj_values[i] = Math.abs(resm.getDouble(2 + i) - worse[i]) / Math.abs(best[i] - worse[i]);
+                    }
+                }
+                pol.setObjectives(obj_values);
+                mypol.add(pol);
+            }
+            Spectral myCluster = new Spectral(mypol, kmeans);
+            Map<Integer, List<Integer>> clusterList = myCluster.clusterFinal;
+            Iterator it = clusterList.entrySet().iterator();
+            int counter = 0;
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                List<Integer> ml = (List<Integer>) pair.getValue();
+                int key = (int) pair.getKey();
+                JSONObject item = new JSONObject();
+                for (int i : ml) {
+                    item.put(Integer.toString(i), Integer.toString(i));
+                }
+                mylist.put("cluster " + Integer.toString(counter), item);
+                counter++;
+            }
+            DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+            Date today = Calendar.getInstance().getTime();
+            String reportDate = df.format(today);
+            result.put(Integer.toString(mylist.length()) + " results on " + reportDate, mylist);
+            stmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.print(ex.getMessage());
+        } catch (JSONException ex) {
+            Logger.getLogger(RestGameBiofuels.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        ResponseBuilder builder = Response.ok(result.toString());
+        return builder.build();
+    }
+
+    //Finding pareto frontiers provided the minimization or maximization criteria of each objective O(n^2)
+    public static List<Integer> getDominatedbyList(List<policy> theList, policy mpol, boolean[] minmax) {
+        double[] data = mpol.getObjectives();
+        List<Integer> ret = new ArrayList<>();
+        for (int j = 0; j < theList.size(); j++) {
+            double[] element = theList.get(j).getObjectives();
+            boolean bigger = true;
+            boolean smaller = true;
+            boolean equal = true;
+
+            for (int w = 0; w < data.length; w++) {
+                if (minmax[w]) {
+                    int result = maximizationofObjective(data[w], element[w]);
+                    if (result == 1) {
+                        bigger = true && bigger;
+                        smaller = false;
+                        equal = false;
+                    } else if (result == 0) {
+                        equal = true && equal;
+                    } else {
+                        bigger = false;
+                        smaller = true && smaller;
+                        equal = false;
+                    }
+                } else {
+                    int result = minimizationofObjective(data[w], element[w]);
+                    if (result == 1) {
+                        bigger = true && bigger;
+                        smaller = false;
+                        equal = false;
+                    } else if (result == 0) {
+                        equal = true && equal;
+                    } else {
+                        bigger = false;
+                        smaller = true && smaller;
+                        equal = false;
+                    }
+                }
+            }
+            if (!equal) {
+
+                if (smaller) {
+                    ret.add(theList.get(j).getID());
+                }
+            }
+        }
+        return ret;
+    }
 }

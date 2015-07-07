@@ -59,6 +59,25 @@ public class methods {
         }
     }
 
+    public static class polComparatorCAT implements Comparator<policy> {
+
+        public int compare(policy p1, policy p2) {
+            if (Integer.compare(p1.getDominatedbycategory(), p2.getDominatedbycategory()) > 0) {
+                return 1;
+            } else if (Integer.compare(p1.getDominatedbycategory(), p2.getDominatedbycategory()) < 0) {
+                return -1;
+            } else {
+                if (Integer.compare(p1.getDominated(), p2.getDominated()) > 0) {
+                    return 1;
+                } else if (Integer.compare(p1.getDominated(), p2.getDominated()) < 0) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
+        }
+    }
+
     public static void paretoL(List<policy> theList) {
 
         for (int i = 0; i < theList.size(); i++) {
@@ -101,7 +120,7 @@ public class methods {
 
     }
 
-    public static List<policy> dominationBYcategory(List<policy> theList,boolean[] minmax) {
+    public static List<policy> dominationBYcategory(List<policy> theList, boolean[] minmax) {
         Hashtable<String, List<policy>> myhash = new Hashtable<>();
         List<policy> temp = new ArrayList<>();
         List<policy> gatherList = new ArrayList<>();
@@ -226,9 +245,9 @@ public class methods {
         }
         return minmax;
     }
-    
+
     //find ranges and their % of appearance 
-       public static double[] find_space(List<maj> test, int total) {
+    public static double[] find_space(List<maj> test, int total) {
 
         double[] space = new double[3];
         for (int u = 0; u < space.length; u++) {
@@ -264,7 +283,8 @@ public class methods {
         }
         return space;
     }
-public static List<maj> merge(List<maj> majList) {
+
+    public static List<maj> merge(List<maj> majList) {
         List<maj> merged = new ArrayList<maj>();
         Hashtable<Double, Integer> hashList = new Hashtable<Double, Integer>();
         for (maj temp : majList) {
@@ -310,7 +330,7 @@ public static List<maj> merge(List<maj> majList) {
         }
         return temp1;
     }
-    
+
     //an oi times einai sunexeis tupou 0.1-0.2-0.3 ktl tote to diastima tha antistoixei sto 20% tou diastimatos 
     //an den einai tote to diastima tha antistoixei sto 20% twn sinolikwn timwn pou emfanizontai :)
     public static class MajComparator implements Comparator<maj> {
@@ -321,7 +341,6 @@ public static List<maj> merge(List<maj> majList) {
         }
     }
 
- 
 //Finding pareto frontiers provided the minimization or maximization criteria of each objective O(n^2)
     public static List<policy> paretoM(List<policy> theList, boolean[] minmax) {
 
@@ -366,12 +385,12 @@ public static List<maj> merge(List<maj> majList) {
                 if (!equal) {
                     if (bigger) {
                         theList.get(j).setDominated(theList.get(j).getDominated() + 1);
-                      //  theList.get(j).setSi(theList.get(i).getPolicyName());
+                        //  theList.get(j).setSi(Integer.toString(theList.get(i).getID()));
                         theList.get(i).setSiR(Integer.toString(theList.get(j).getID()));
                     }
                     if (smaller) {
                         theList.get(i).setDominated(theList.get(i).getDominated() + 1);
-                      //  theList.get(i).setSi(theList.get(j).getPolicyName());
+                        //  theList.get(i).setSi(Integer.toString(theList.get(j).getID()));
                         theList.get(j).setSiR(Integer.toString(theList.get(i).getID()));
                     }
                 }
@@ -601,7 +620,7 @@ public static List<maj> merge(List<maj> majList) {
         return retList;
     }
 
-      public static List<policy> paretoG(List<policy> theList, boolean[] minmax) {
+    public static List<policy> paretoG(List<policy> theList, boolean[] minmax) {
 
         for (int i = 0; i < theList.size(); i++) {
             double[] data = theList.get(i).getObjectives();
@@ -646,7 +665,7 @@ public static List<maj> merge(List<maj> majList) {
                         theList.get(j).setDominatedbycategory(theList.get(j).getDominatedbycategory() + 1);
                     }
                     if (smaller) {
-                        theList.get(i).setDominatedbycategory(theList.get(i).getDominatedbycategory()+ 1);
+                        theList.get(i).setDominatedbycategory(theList.get(i).getDominatedbycategory() + 1);
                     }
                 }
             }
